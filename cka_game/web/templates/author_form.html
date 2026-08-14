@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ "Edit" if scenario else "New" }} Scenario</h1>
+<form method="post" action="/author/scenario">
+  <label>ID (filename, no spaces)<br>
+    <input name="id" value="{{ scenario.id if scenario else '' }}" required></label><br>
+  <label>Title<br><input name="title" value="{{ scenario.title if scenario else '' }}" required></label><br>
+  <label>Description<br><textarea name="description">{{ scenario.description if scenario else '' }}</textarea></label><br>
+  <label>Category<br>
+    <select name="category">
+      {% for c in ["workloads", "networking", "storage", "security", "troubleshooting", "cluster"] %}
+      <option value="{{ c }}" {% if scenario and scenario.category == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select></label><br>
+  <label>Difficulty<br>
+    <select name="difficulty">
+      {% for d in ["easy", "medium", "hard"] %}
+      <option value="{{ d }}" {% if scenario and scenario.difficulty == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select></label><br>
+  <label>Points<br><input type="number" name="points" value="{{ scenario.points if scenario else 10 }}"></label><br>
+  <label>Hint penalty<br><input type="number" name="hint_penalty" value="{{ scenario.hint_penalty if scenario else 2 }}"></label><br>
+  <label>Hints (one per line)<br>
+    <textarea name="hints">{{ scenario.hints|join('\n') if scenario else '' }}</textarea></label><br>
+  <label>Answer<br><textarea name="answer">{{ scenario.answer if scenario else '' }}</textarea></label><br>
+  <label>Reset namespace (deleted on reset)<br>
+    <input name="reset_namespace" value="{{ scenario.reset[0].name if scenario and scenario.reset else '' }}"></label><br>
+
+  <h2>Verify checks</h2>
+  <table id="check-table">
+    <thead>
+      <tr>
+        <th>Type</th><th>Kind</th><th>Namespace</th><th>Name</th><th>Selector</th>
+        <th>Field</th><th>Value</th><th>Count</th><th>Container</th>
+      </tr>
+    </thead>
+    <tbody id="check-rows">
+      {% for check in (scenario.verify if scenario else []) %}
+      <tr class="check-row">
+        <td><select name="check_type">
+          {% for t in ["resource_exists", "field_equals", "count_matches", "container_image_equals"] %}
+          <option value="{{ t }}" {% if check.type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select></td>
+        <td><input name="check_kind" value="{{ check.kind or '' }}"></td>
+        <td><input name="check_namespace" value="{{ check.namespace or '' }}"></td>
+        <td><input name="check_name" value="{{ check.name or '' }}"></td>
+        <td><input name="check_selector" value="{{ check.selector or '' }}"></td>
+        <td><input name="check_field" value="{{ check.field or '' }}"></td>
+        <td><input name="check_value" value="{{ check.value or '' }}"></td>
+        <td><input name="check_count" value="{{ check.count or '' }}"></td>
+        <td><input name="check_container" value="{{ check.container or '' }}"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="button" onclick="addCheckRow()">+ Add check</button>
+  <p><button type="submit">Save scenario</button></p>
+</form>
+
+<template id="check-row-template">
+  <tr class="check-row">
+    <td><select name="check_type">
+      <option value="resource_exists">resource_exists</option>
+      <option value="field_equals">field_equals</option>
+      <option value="count_matches">count_matches</option>
+      <option value="container_image_equals">container_image_equals</option>
+    </select></td>
+    <td><input name="check_kind"></td>
+    <td><input name="check_namespace"></td>
+    <td><input name="check_name"></td>
+    <td><input name="check_selector"></td>
+    <td><input name="check_field"></td>
+    <td><input name="check_value"></td>
+    <td><input name="check_count"></td>
+    <td><input name="check_container"></td>
+  </tr>
+</template>
+<script>
+  function addCheckRow() {
+    const template = document.getElementById("check-row-template");
+    const row = template.content.cloneNode(true);
+    document.getElementById("check-rows").appendChild(row);
+  }
+</script>
+{% endblock %}

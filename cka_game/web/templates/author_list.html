@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Scenarios (Author)</h1>
+<p><a href="/author/new">+ New scenario</a></p>
+<ul>
+  {% for scenario in scenarios %}
+  <li>
+    {{ scenario.title }} ({{ scenario.id }})
+    <a href="/author/{{ scenario.id }}/edit">Edit</a>
+    <form method="post" action="/author/scenario/{{ scenario.id }}/delete" style="display:inline">
+      <button type="submit">Delete</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}
