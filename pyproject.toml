@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cka-game"
+version = "0.1.0"
+description = "CLI + web app for practicing Kubernetes/CKA skills against a kind cluster"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "typer>=0.12",
+    "rich>=13.7",
+    "kubernetes>=29.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+cka-game = "cka_game.cli.main:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "httpx>=0.27"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["cka_game"]
