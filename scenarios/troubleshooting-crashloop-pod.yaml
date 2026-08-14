@@ -1,8 +1,9 @@
 title: Fix a CrashLooping container
 description: >
-  In namespace "scenario-troubleshooting-crashloop", a Pod named "crashy" running
-  busybox exits immediately (its command is wrong), leaving it in CrashLoopBackOff.
-  Diagnose it with kubectl logs/describe and fix it so it reaches a stable Running state.
+  In namespace "scenario-troubleshooting-crashloop", create a Pod named "crashy"
+  running busybox with a command that exits immediately (e.g. `false`), causing
+  it to CrashLoopBackOff. Then diagnose it with kubectl logs/describe and fix the
+  command so the Pod reaches a stable Running state.
 category: troubleshooting
 difficulty: medium
 points: 15
