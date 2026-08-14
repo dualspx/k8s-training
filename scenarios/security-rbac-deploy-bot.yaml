@@ -1,0 +1,38 @@
+title: Least-privilege ServiceAccount
+description: >
+  In namespace "scenario-security-rbac", create a ServiceAccount named
+  "deploy-bot", a Role named "pod-deployment-reader" allowing get/list/watch
+  on pods and deployments, and a RoleBinding named "deploy-bot-binding"
+  binding the Role to the ServiceAccount.
+category: security
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl create serviceaccount / kubectl create role / kubectl create rolebinding"
+answer: |
+  kubectl create namespace scenario-security-rbac
+  kubectl create serviceaccount deploy-bot -n scenario-security-rbac
+  kubectl create role pod-deployment-reader \
+    --verb=get --verb=list --verb=watch \
+    --resource=pods,deployments -n scenario-security-rbac
+  kubectl create rolebinding deploy-bot-binding \
+    --role=pod-deployment-reader \
+    --serviceaccount=scenario-security-rbac:deploy-bot \
+    -n scenario-security-rbac
+verify:
+  - type: resource_exists
+    kind: ServiceAccount
+    namespace: scenario-security-rbac
+    name: deploy-bot
+  - type: resource_exists
+    kind: Role
+    namespace: scenario-security-rbac
+    name: pod-deployment-reader
+  - type: resource_exists
+    kind: RoleBinding
+    namespace: scenario-security-rbac
+    name: deploy-bot-binding
+reset:
+  - kind: Namespace
+    name: scenario-security-rbac

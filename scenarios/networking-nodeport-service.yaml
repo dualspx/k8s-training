@@ -1,0 +1,29 @@
+title: Convert a Service to NodePort
+description: >
+  In namespace "scenario-networking-nodeport", create a Service named
+  "web" of type NodePort exposing port 80.
+category: networking
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl patch service <name> -p '{\"spec\":{\"type\":\"NodePort\"}}'"
+answer: |
+  kubectl create namespace scenario-networking-nodeport
+  kubectl create deployment web --image=nginx:1.25 -n scenario-networking-nodeport
+  kubectl expose deployment web --port=80 -n scenario-networking-nodeport
+  kubectl patch service web -n scenario-networking-nodeport -p '{"spec":{"type":"NodePort"}}'
+verify:
+  - type: resource_exists
+    kind: Service
+    namespace: scenario-networking-nodeport
+    name: web
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-nodeport
+    name: web
+    field: spec.type
+    value: NodePort
+reset:
+  - kind: Namespace
+    name: scenario-networking-nodeport

@@ -1,0 +1,21 @@
+title: Cordon a node
+description: >
+  Mark node "cka-practice-worker2" as unschedulable using kubectl cordon.
+  (This scenario has no automated reset — run "kubectl uncordon
+  cka-practice-worker2" yourself before retrying, since undoing a cordon
+  isn't a delete.)
+category: cluster
+difficulty: easy
+points: 5
+hint_penalty: 1
+hints:
+  - "kubectl cordon <node-name>"
+answer: |
+  kubectl cordon cka-practice-worker2
+verify:
+  - type: field_equals
+    kind: Node
+    name: cka-practice-worker2
+    field: spec.unschedulable
+    value: true
+reset: []

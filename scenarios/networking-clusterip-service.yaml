@@ -1,0 +1,28 @@
+title: Expose a Deployment via ClusterIP
+description: >
+  In namespace "scenario-networking-clusterip", create an nginx Deployment
+  named "web" and expose it as a ClusterIP Service on port 80.
+category: networking
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl expose deployment <name> --port=80"
+answer: |
+  kubectl create namespace scenario-networking-clusterip
+  kubectl create deployment web --image=nginx:1.25 -n scenario-networking-clusterip
+  kubectl expose deployment web --port=80 -n scenario-networking-clusterip
+verify:
+  - type: resource_exists
+    kind: Service
+    namespace: scenario-networking-clusterip
+    name: web
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-clusterip
+    name: web
+    field: spec.ports.0.port
+    value: 80
+reset:
+  - kind: Namespace
+    name: scenario-networking-clusterip

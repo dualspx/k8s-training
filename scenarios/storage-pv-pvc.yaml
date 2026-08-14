@@ -1,0 +1,54 @@
+title: Bind a PersistentVolumeClaim
+description: >
+  In namespace "scenario-storage-pvpvc", create a 1Gi hostPath
+  PersistentVolume and a PersistentVolumeClaim named "data-claim" that
+  binds to it.
+category: storage
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints:
+  - "hostPath PV accessModes and capacity must satisfy the PVC's request."
+answer: |
+  kubectl create namespace scenario-storage-pvpvc
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: scenario-storage-pvpvc-pv
+  spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    hostPath:
+      path: /tmp/scenario-storage-pvpvc
+  EOF
+  cat <<'EOF' | kubectl apply -n scenario-storage-pvpvc -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: data-claim
+  spec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  EOF
+verify:
+  - type: resource_exists
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-pvpvc
+    name: data-claim
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-pvpvc
+    name: data-claim
+    field: status.phase
+    value: Bound
+reset:
+  - kind: Namespace
+    name: scenario-storage-pvpvc
+  - kind: PersistentVolume
+    name: scenario-storage-pvpvc-pv

@@ -1,0 +1,28 @@
+title: Create a CronJob
+description: >
+  In namespace "scenario-workloads-cronjob", create a CronJob named
+  "print-date" that runs every 2 minutes and prints the current date.
+category: workloads
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl create cronjob --help"
+  - 'kubectl create cronjob print-date --image=busybox --schedule="*/2 * * * *" -n <namespace> -- date'
+answer: |
+  kubectl create namespace scenario-workloads-cronjob
+  kubectl create cronjob print-date --image=busybox --schedule="*/2 * * * *" -n scenario-workloads-cronjob -- date
+verify:
+  - type: resource_exists
+    kind: CronJob
+    namespace: scenario-workloads-cronjob
+    name: print-date
+  - type: field_equals
+    kind: CronJob
+    namespace: scenario-workloads-cronjob
+    name: print-date
+    field: spec.schedule
+    value: "*/2 * * * *"
+reset:
+  - kind: Namespace
+    name: scenario-workloads-cronjob

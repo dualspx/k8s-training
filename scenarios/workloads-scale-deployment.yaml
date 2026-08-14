@@ -1,0 +1,29 @@
+title: Scale a Deployment
+description: >
+  Create an nginx Deployment named "web" with 3 replicas in the
+  "scenario-workloads-scale" namespace, then scale it to 5 replicas.
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl create namespace, then kubectl create deployment."
+  - "kubectl scale deployment <name> --replicas=<n> -n <namespace>"
+answer: |
+  kubectl create namespace scenario-workloads-scale
+  kubectl create deployment web --image=nginx:1.25 -n scenario-workloads-scale
+  kubectl scale deployment web --replicas=5 -n scenario-workloads-scale
+verify:
+  - type: resource_exists
+    kind: Deployment
+    namespace: scenario-workloads-scale
+    name: web
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-workloads-scale
+    name: web
+    field: spec.replicas
+    value: 5
+reset:
+  - kind: Namespace
+    name: scenario-workloads-scale

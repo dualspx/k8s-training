@@ -1,0 +1,41 @@
+title: Schedule a Pod on a specific node
+description: >
+  In namespace "scenario-workloads-node-affinity", create a Pod named
+  "pinned" running nginx with a nodeSelector for disktype=ssd (label the
+  node "cka-practice-worker" with disktype=ssd first).
+category: workloads
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl label node cka-practice-worker disktype=ssd --overwrite"
+  - "Set spec.nodeSelector: {disktype: ssd} on the Pod."
+answer: |
+  kubectl create namespace scenario-workloads-node-affinity
+  kubectl label node cka-practice-worker disktype=ssd --overwrite
+  cat <<'EOF' | kubectl apply -n scenario-workloads-node-affinity -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pinned
+  spec:
+    nodeSelector:
+      disktype: ssd
+    containers:
+      - name: pinned
+        image: nginx:1.25
+  EOF
+verify:
+  - type: resource_exists
+    kind: Pod
+    namespace: scenario-workloads-node-affinity
+    name: pinned
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-node-affinity
+    name: pinned
+    field: spec.nodeSelector.disktype
+    value: ssd
+reset:
+  - kind: Namespace
+    name: scenario-workloads-node-affinity

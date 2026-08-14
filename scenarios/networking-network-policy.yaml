@@ -1,0 +1,42 @@
+title: Restrict ingress with a NetworkPolicy
+description: >
+  In namespace "scenario-networking-netpol", create a NetworkPolicy named
+  "web-allow-frontend" that selects pods labeled app=web and only allows
+  ingress from pods labeled role=frontend.
+category: networking
+difficulty: hard
+points: 15
+hint_penalty: 3
+hints:
+  - "spec.podSelector selects the protected pods; spec.ingress[].from[].podSelector selects allowed sources."
+answer: |
+  kubectl create namespace scenario-networking-netpol
+  cat <<'EOF' | kubectl apply -n scenario-networking-netpol -f -
+  apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: web-allow-frontend
+  spec:
+    podSelector:
+      matchLabels:
+        app: web
+    ingress:
+      - from:
+          - podSelector:
+              matchLabels:
+                role: frontend
+  EOF
+verify:
+  - type: resource_exists
+    kind: NetworkPolicy
+    namespace: scenario-networking-netpol
+    name: web-allow-frontend
+  - type: field_equals
+    kind: NetworkPolicy
+    namespace: scenario-networking-netpol
+    name: web-allow-frontend
+    field: spec.podSelector.matchLabels.app
+    value: web
+reset:
+  - kind: Namespace
+    name: scenario-networking-netpol
