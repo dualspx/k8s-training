@@ -4,6 +4,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from cka_game.core.kube import KindSafetyError, build_cluster_client
@@ -134,7 +135,7 @@ def check(scenario_id: str):
     all_passed = True
     for result in results:
         icon = "[green]PASS[/green]" if result.passed else "[red]FAIL[/red]"
-        console.print(f"{icon} [{result.type}] {result.message}")
+        console.print(f"{icon} {escape(f'[{result.type}]')} {result.message}")
         all_passed = all_passed and result.passed
 
     store = _progress_store()
