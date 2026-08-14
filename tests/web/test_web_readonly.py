@@ -1,0 +1,73 @@
+from fastapi.testclient import TestClient
+
+import cka_game.web.app as web_app
+from cka_game.core.progress import ProgressEntry, ProgressStore
+
+SCENARIO_YAML = """
+title: Scale a Deployment
+description: Scale web to 5 replicas.
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "first hint"
+  - "second hint"
+answer: "kubectl scale deployment web --replicas=5"
+verify: []
+reset: []
+"""
+
+
+def _client(tmp_path, monkeypatch):
+    scenarios_dir = tmp_path / "scenarios"
+    scenarios_dir.mkdir()
+    (scenarios_dir / "web-scale.yaml").write_text(SCENARIO_YAML)
+    progress_path = tmp_path / "data" / "progress.json"
+    monkeypatch.setattr(web_app, "SCENARIOS_DIR", scenarios_dir)
+    monkeypatch.setattr(web_app, "PROGRESS_PATH", progress_path)
+    return TestClient(web_app.create_app()), progress_path
+
+
+def test_dashboard_lists_scenario(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Scale a Deployment" in response.text
+
+
+def test_scenario_detail_shows_only_revealed_hints(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(hints_used=1))
+    response = client.get("/scenario/web-scale")
+    assert response.status_code == 200
+    assert "first hint" in response.text
+    assert "second hint" not in response.text
+
+
+def test_scenario_detail_unknown_id_returns_404(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/scenario/nope")
+    assert response.status_code == 404
+
+
+def test_scenario_state_api_reflects_progress(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save(
+        "web-scale", ProgressEntry(status="completed", hints_used=1, score=8)
+    )
+    response = client.get("/api/scenario/web-scale/state")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "completed"
+    assert data["score"] == 8
+    assert data["hints_revealed"] == ["first hint"]
+
+
+def test_dashboard_state_api_sums_total_score(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))
+    response = client.get("/api/dashboard/state")
+    data = response.json()
+    assert data["total_score"] == 8
+    assert data["scenarios"] == [{"id": "web-scale", "status": "completed", "score": 8}]

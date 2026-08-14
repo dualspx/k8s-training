@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ scenario.title }}</h1>
+<p class="meta">{{ scenario.category }} &middot; {{ scenario.difficulty }} &middot; {{ scenario.points }} pts</p>
+<p>{{ scenario.description }}</p>
+<p>Status: <span id="status">{{ entry.status }}</span></p>
+<p>Score: <span id="score">{{ entry.score }}</span></p>
+<h2>Hints revealed so far</h2>
+<ul id="hints">
+  {% for hint in revealed_hints %}
+  <li>{{ hint }}</li>
+  {% endfor %}
+</ul>
+<p class="cli-tip">Use <code>cka-game hint {{ scenario.id }}</code>, <code>cka-game check {{ scenario.id }}</code>,
+  <code>cka-game reveal {{ scenario.id }}</code>, or <code>cka-game reset {{ scenario.id }}</code> in your terminal.</p>
+<script>pollScenario("/api/scenario/{{ scenario.id }}/state");</script>
+{% endblock %}

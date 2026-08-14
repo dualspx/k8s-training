@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}CKA Scenario Game{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="nav">
+    <a href="/" class="brand">CKA Scenario Game</a>
+    <span id="total-score" class="score"></span>
+    {% if mode == "senior" %}
+      <a href="/author">Author</a>
+      <form method="post" action="/mode/junior" class="mode-form"><button type="submit">Switch to Junior</button></form>
+    {% else %}
+      <form method="post" action="/mode/senior" class="mode-form"><button type="submit">Switch to Senior</button></form>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

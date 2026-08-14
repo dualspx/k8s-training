@@ -1,0 +1,13 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #e6e6e6; }
+.nav { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; background: #171a21; }
+.nav .brand { font-weight: bold; color: #7dd3fc; text-decoration: none; }
+.score { margin-left: auto; font-weight: bold; color: #facc15; }
+main { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #2a2f3a; }
+.difficulty-easy { color: #4ade80; }
+.difficulty-medium { color: #facc15; }
+.difficulty-hard { color: #f87171; }
+.cli-tip code { background: #1f2430; padding: 0.15rem 0.4rem; border-radius: 4px; }
+form.mode-form { margin: 0; }
+button { cursor: pointer; }

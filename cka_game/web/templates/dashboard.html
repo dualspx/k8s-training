@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Scenarios</h1>
+<table class="scenario-table" id="scenario-table">
+  <thead><tr><th>Title</th><th>Category</th><th>Difficulty</th><th>Points</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr data-scenario-id="{{ row.scenario.id }}">
+      <td><a href="/scenario/{{ row.scenario.id }}">{{ row.scenario.title }}</a></td>
+      <td>{{ row.scenario.category }}</td>
+      <td class="difficulty-{{ row.scenario.difficulty }}">{{ row.scenario.difficulty }}</td>
+      <td>{{ row.scenario.points }}</td>
+      <td class="status">{{ row.entry.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<script>pollDashboard("/api/dashboard/state");</script>
+{% endblock %}
