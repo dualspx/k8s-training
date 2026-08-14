@@ -107,3 +107,91 @@ def test_mode_toggle_sets_cookie(tmp_path, monkeypatch):
     response = client.post("/mode/senior", follow_redirects=False)
     assert response.status_code == 303
     assert response.cookies["cka_game_mode"] == "senior"
+
+
+def test_edit_scenario_via_form_coerces_check_value_to_int(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "web-scale",
+            "title": "Scale a Deployment",
+            "description": "Scale web to 5 replicas.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "first hint",
+            "answer": "kubectl scale deployment web --replicas=5",
+            "reset_namespace": "ns",
+            "check_type": ["field_equals"],
+            "check_kind": ["Deployment"],
+            "check_namespace": ["ns"],
+            "check_name": ["web"],
+            "check_selector": [""],
+            "check_field": ["spec.replicas"],
+            "check_value": ["5"],
+            "check_count": [""],
+            "check_container": [""],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "web-scale")
+    assert scenario.verify[0]["value"] == 5
+    assert isinstance(scenario.verify[0]["value"], int)
+
+
+def test_edit_scenario_via_form_preserves_non_namespace_reset_steps(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    (scenarios_dir / "storage-pv-pvc.yaml").write_text(
+        """
+title: Bind a PersistentVolumeClaim
+description: Bind a PVC.
+category: storage
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints: []
+answer: "kubectl apply -f pv.yaml"
+verify: []
+reset:
+  - kind: Namespace
+    name: scenario-storage-pvpvc
+  - kind: PersistentVolume
+    name: scenario-storage-pvpvc-pv
+"""
+    )
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "storage-pv-pvc",
+            "title": "Bind a PersistentVolumeClaim",
+            "description": "Bind a PVC.",
+            "category": "storage",
+            "difficulty": "medium",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "",
+            "answer": "kubectl apply -f pv.yaml",
+            "reset_namespace": "scenario-storage-pvpvc",
+            "check_type": [],
+            "check_kind": [],
+            "check_namespace": [],
+            "check_name": [],
+            "check_selector": [],
+            "check_field": [],
+            "check_value": [],
+            "check_count": [],
+            "check_container": [],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "storage-pv-pvc")
+    assert {"kind": "PersistentVolume", "name": "scenario-storage-pvpvc-pv"} in scenario.reset
+    assert {"kind": "Namespace", "name": "scenario-storage-pvpvc"} in scenario.reset

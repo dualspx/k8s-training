@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -137,7 +138,10 @@ def create_app() -> FastAPI:
                 check["field"] = field_path
             value = form.getlist("check_value")[i]
             if value:
-                check["value"] = value
+                # Coerce like YAML itself would (matching how hand-authored
+                # scenario YAML types its values): "5" -> 5, "true" -> True,
+                # bare strings like "NodePort" stay strings.
+                check["value"] = yaml.safe_load(value)
             count = form.getlist("check_count")[i]
             if count:
                 check["count"] = int(count)
@@ -147,8 +151,21 @@ def create_app() -> FastAPI:
             verify.append(check)
 
         reset_namespace = form.get("reset_namespace", "")
+        scenario_id = form.get("id", "").strip()
+
+        # Preserve any non-Namespace reset steps (e.g. a PersistentVolume
+        # deletion) already present on the existing scenario when editing,
+        # since the form only ever exposes a single namespace field and
+        # would otherwise silently discard them.
+        existing = load_scenario(SCENARIOS_DIR, scenario_id)
+        if existing is not None:
+            other_steps = [step for step in existing.reset if step.get("kind") != "Namespace"]
+            reset = ([{"kind": "Namespace", "name": reset_namespace}] if reset_namespace else []) + other_steps
+        else:
+            reset = [{"kind": "Namespace", "name": reset_namespace}] if reset_namespace else []
+
         scenario = Scenario(
-            id=form.get("id", "").strip(),
+            id=scenario_id,
             title=form.get("title", ""),
             description=form.get("description", ""),
             category=form.get("category", ""),
@@ -158,7 +175,7 @@ def create_app() -> FastAPI:
             hints=hints,
             answer=form.get("answer", ""),
             verify=verify,
-            reset=[{"kind": "Namespace", "name": reset_namespace}] if reset_namespace else [],
+            reset=reset,
         )
         save_scenario(SCENARIOS_DIR, scenario)
         return RedirectResponse("/author", status_code=303)
