@@ -50,6 +50,7 @@ def test_hint_reveals_next_hint_and_deducts_score(tmp_path, monkeypatch):
     result = runner.invoke(cli_main.app, ["hint", "web-scale"])
     assert result.exit_code == 0
     assert "first hint" in result.stdout
+    assert "Potential score is now: 8" in result.stdout
     from cka_game.core.progress import ProgressStore
 
     entry = ProgressStore(progress_path).get("web-scale")
