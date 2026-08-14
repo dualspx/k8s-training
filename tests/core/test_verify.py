@@ -151,3 +151,23 @@ def test_malformed_check_fails_without_raising():
     results = run_verify(scenario, client)
     assert results[0].passed is False
     assert "error evaluating check" in results[0].message
+
+
+def test_non_dict_check_fails_without_raising():
+    """A non-dict entry (None, str, int, etc.) should fail gracefully and not abort the loop."""
+    client = FakeClusterClient([{"kind": "Pod", "metadata": {"name": "p1", "namespace": "ns"}}])
+    scenario = _scenario(
+        [
+            None,  # Non-dict entry that would raise AttributeError if we call .get() on it
+            {"type": "resource_exists", "kind": "Pod", "namespace": "ns", "name": "p1"},  # Valid check
+        ]
+    )
+    results = run_verify(scenario, client)
+    # Should not have raised; we should have 2 results
+    assert len(results) == 2
+    # First result (None) should be failed
+    assert results[0].passed is False
+    assert "error evaluating check" in results[0].message
+    # Second result (valid check) should be evaluated correctly
+    assert results[1].passed is True
+    assert "exists" in results[1].message

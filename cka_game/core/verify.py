@@ -109,15 +109,17 @@ _CHECKERS = {
 def run_verify(scenario, client) -> list[CheckResult]:
     results = []
     for index, check in enumerate(scenario.verify):
-        checker = _CHECKERS.get(check.get("type"))
-        if checker is None:
-            results.append(
-                CheckResult(index, check.get("type"), False, f"unknown check type '{check.get('type')}'")
-            )
-            continue
+        check_type = None
         try:
+            check_type = check.get("type")
+            checker = _CHECKERS.get(check_type)
+            if checker is None:
+                results.append(
+                    CheckResult(index, check_type, False, f"unknown check type '{check_type}'")
+                )
+                continue
             passed, message = checker(check, client)
         except Exception as exc:
             passed, message = False, f"error evaluating check: {exc}"
-        results.append(CheckResult(index, check["type"], passed, message))
+        results.append(CheckResult(index, check_type, passed, message))
     return results
