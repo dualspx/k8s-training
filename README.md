@@ -12,11 +12,36 @@ python3 -m venv .venv
 ```
 
 This project assumes the `kind-cka-practice` cluster from this session already
-exists (`kind get clusters` should list it). If it doesn't:
+exists (`kind get clusters` should list it). If it doesn't, create a
+**multi-node** cluster — some scenarios (e.g. node affinity, cordoning a
+node) require a `cka-practice-worker` and a `cka-practice-worker2`, so a
+single-node cluster can't solve every scenario. Save this as
+`kind-config.yaml`:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: cka-practice
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+```
+
+Then create the cluster:
 
 ```bash
-kind create cluster --name cka-practice
+kind create cluster --config kind-config.yaml
 ```
+
+Commands must be run from the project root, since `scenarios/` and
+`data/progress.json` are resolved relative to the current working
+directory by default. Override this with the `CKA_GAME_ROOT` env var (the
+CLI and web app will then look for `$CKA_GAME_ROOT/scenarios` and
+`$CKA_GAME_ROOT/data/progress.json`). Similarly, the target Kubernetes
+context defaults to `kind-cka-practice` but can be overridden with the
+`CKA_GAME_KUBE_CONTEXT` env var (still must start with `kind-`, per the
+safety guard below).
 
 ## Playing (junior mode)
 
@@ -32,7 +57,9 @@ kind create cluster --name cka-practice
 ```
 
 In another terminal, run `.venv/bin/cka-game serve` and open `http://localhost:8000`
-to watch the scenario board update live as you play.
+to watch the scenario board update live as you play. `serve` accepts
+`--host` and `--port` if you need to bind somewhere other than the default
+`127.0.0.1:8000` (e.g. `.venv/bin/cka-game serve --host 0.0.0.0 --port 9000`).
 
 ## Authoring (senior mode)
 
@@ -46,3 +73,13 @@ directly — the app picks up changes on the next request, no restart needed.
 The app refuses to run any cluster-touching command against a context that
 doesn't start with `kind-` (see `cka_game/core/kube.py`). It will never
 target a real cluster by accident.
+
+## Running the tests
+
+```bash
+.venv/bin/python -m pytest -m "not integration"   # fast suite, no cluster required
+.venv/bin/python -m pytest -m integration          # also exercises the real kind-cka-practice cluster
+```
+
+Plain `.venv/bin/python -m pytest` (no marker) runs only the fast suite by
+default — the integration marker must be requested explicitly.
