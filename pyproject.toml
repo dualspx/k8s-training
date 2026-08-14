@@ -29,3 +29,4 @@ packages = ["cka_game"]
 
 [tool.pytest.ini_options]
 markers = ["integration: exercises the real kind-cka-practice cluster"]
+addopts = "-m 'not integration'"

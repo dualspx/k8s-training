@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cka_game.core.kube import build_cluster_client
+from cka_game.core.kube import build_cluster_client, resolve_context
 from cka_game.core.reset import run_reset
 from cka_game.core.scenarios import load_scenarios
 from cka_game.core.verify import run_verify
@@ -21,9 +21,33 @@ pytestmark = pytest.mark.integration
 VERIFY_RETRY_ATTEMPTS = 10
 VERIFY_RETRY_DELAY_SECONDS = 1.0
 
+# These scenarios' `answer` is applied via a raw `bash -c` subprocess call
+# below, which does NOT go through core.kube's kind- safety guard. Extra
+# cleanup for scenarios whose `reset` can't fully undo what `answer` did
+# (cordoning a node, labeling a node) — run best-effort in the `finally`
+# block after the generic run_reset() call, so the suite is self-cleaning.
+EXTRA_CLEANUP = {
+    "cluster-cordon-node": ["kubectl uncordon cka-practice-worker2"],
+    "workloads-node-affinity": ["kubectl label node cka-practice-worker disktype-"],
+}
+
+
+def _assert_ambient_context_is_safe():
+    safe_context = resolve_context()
+    ambient = subprocess.run(
+        ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    if ambient != safe_context:
+        pytest.fail(
+            f"Ambient kubectl context is '{ambient}' but the safety-guarded context is "
+            f"'{safe_context}'. Refusing to run integration tests — run "
+            f"'kubectl config use-context {safe_context}' first."
+        )
+
 
 @pytest.fixture(scope="module")
 def cluster_client():
+    _assert_ambient_context_is_safe()
     return build_cluster_client()
 
 
@@ -44,3 +68,5 @@ def test_seed_scenario_answer_satisfies_its_own_verify(scenario, cluster_client)
         assert not failures, f"{scenario.id} failed checks: {failures}"
     finally:
         run_reset(scenario, cluster_client)
+        for command in EXTRA_CLEANUP.get(scenario.id, []):
+            subprocess.run(["bash", "-c", command], check=False, capture_output=True, text=True)
