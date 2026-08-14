@@ -153,8 +153,8 @@ the app has real content on first run.
 
 - Cluster unreachable (kind cluster stopped/deleted): `cka-game check`/`reset` print a clear
   "cluster unreachable, is `kind-cka-practice` running?" message and exit non-zero, rather than
-  a stack trace. The web board's `/api/*` state endpoints degrade to showing last-known
-  progress.json state with a "cluster unreachable" banner, rather than erroring.
+  a stack trace. The web board never contacts the cluster (it only reads `scenarios/` and
+  `data/progress.json`), so it is unaffected by cluster availability.
 - Malformed scenario YAML (bad authoring): skipped at load time with a warning logged (CLI:
   printed; web: shown on the `/author` list), rather than crashing the whole app.
 
