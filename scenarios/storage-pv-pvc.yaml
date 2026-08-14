@@ -9,6 +9,7 @@ points: 10
 hint_penalty: 2
 hints:
   - "hostPath PV accessModes and capacity must satisfy the PVC's request."
+  - "Set storageClassName: \"\" on both the PV and PVC so the cluster's default StorageClass doesn't take over dynamic provisioning."
 answer: |
   kubectl create namespace scenario-storage-pvpvc
   cat <<'EOF' | kubectl apply -f -
@@ -21,6 +22,7 @@ answer: |
       storage: 1Gi
     accessModes:
       - ReadWriteOnce
+    storageClassName: ""
     hostPath:
       path: /tmp/scenario-storage-pvpvc
   EOF
@@ -32,6 +34,7 @@ answer: |
   spec:
     accessModes:
       - ReadWriteOnce
+    storageClassName: ""
     resources:
       requests:
         storage: 1Gi
