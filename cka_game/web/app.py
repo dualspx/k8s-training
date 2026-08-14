@@ -31,6 +31,14 @@ def create_app() -> FastAPI:
     def _mode(request: Request) -> str:
         return request.cookies.get("cka_game_mode", "junior")
 
+    def _total_score() -> int:
+        total = 0
+        for scenario in load_scenarios(SCENARIOS_DIR):
+            entry = store.get(scenario.id)
+            if entry.status == "completed":
+                total += entry.score
+        return total
+
     @app.get("/")
     def dashboard(request: Request):
         scenarios = load_scenarios(SCENARIOS_DIR)
@@ -49,7 +57,7 @@ def create_app() -> FastAPI:
             return templates.TemplateResponse(
                 request,
                 "not_found.html",
-                {"scenario_id": scenario_id, "mode": _mode(request)},
+                {"scenario_id": scenario_id, "mode": _mode(request), "total_score": _total_score()},
                 status_code=404,
             )
         entry = store.get(scenario_id)
@@ -62,6 +70,7 @@ def create_app() -> FastAPI:
                 "entry": entry,
                 "revealed_hints": revealed_hints,
                 "mode": _mode(request),
+                "total_score": _total_score(),
             },
         )
 
@@ -76,6 +85,7 @@ def create_app() -> FastAPI:
             "hints_revealed": scenario.hints[: entry.hints_used],
             "score": entry.score,
             "answer_revealed": entry.answer_revealed,
+            "total_score": _total_score(),
         }
 
     @app.get("/api/dashboard/state")
@@ -96,7 +106,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_list.html",
-            {"scenarios": scenarios, "mode": _mode(request)},
+            {"scenarios": scenarios, "mode": _mode(request), "total_score": _total_score()},
         )
 
     @app.get("/author/new")
@@ -104,7 +114,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_form.html",
-            {"scenario": None, "mode": _mode(request)},
+            {"scenario": None, "mode": _mode(request), "total_score": _total_score()},
         )
 
     @app.get("/author/{scenario_id}/edit")
@@ -113,7 +123,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_form.html",
-            {"scenario": scenario, "mode": _mode(request)},
+            {"scenario": scenario, "mode": _mode(request), "total_score": _total_score()},
         )
 
     @app.post("/author/scenario")

@@ -6,6 +6,10 @@ function pollScenario(url) {
       if (data.error) return;
       document.getElementById("status").textContent = data.status;
       document.getElementById("score").textContent = data.score;
+      if (typeof data.total_score !== "undefined") {
+        const totalScoreEl = document.getElementById("total-score");
+        if (totalScoreEl) totalScoreEl.textContent = "Score: " + data.total_score;
+      }
       const hintsEl = document.getElementById("hints");
       hintsEl.innerHTML = "";
       data.hints_revealed.forEach((hint) => {

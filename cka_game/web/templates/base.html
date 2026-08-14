@@ -8,7 +8,7 @@
 <body>
   <header class="nav">
     <a href="/" class="brand">CKA Scenario Game</a>
-    <span id="total-score" class="score"></span>
+    <span id="total-score" class="score">Score: {{ total_score }}</span>
     {% if mode == "senior" %}
       <a href="/author">Author</a>
       <form method="post" action="/mode/junior" class="mode-form"><button type="submit">Switch to Junior</button></form>

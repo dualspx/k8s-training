@@ -42,6 +42,19 @@ def test_author_list_shows_existing_scenario(tmp_path, monkeypatch):
     assert "Scale a Deployment" in response.text
 
 
+def test_author_list_nav_shows_total_score(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/author")
+    assert 'id="total-score"' in response.text
+    assert "Score: 0" in response.text
+
+
+def test_author_new_nav_shows_total_score(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/author/new")
+    assert "Score: 0" in response.text
+
+
 def test_author_new_form_renders(tmp_path, monkeypatch):
     client, _ = _client(tmp_path, monkeypatch)
     response = client.get("/author/new")

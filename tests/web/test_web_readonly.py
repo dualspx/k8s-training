@@ -71,3 +71,27 @@ def test_dashboard_state_api_sums_total_score(tmp_path, monkeypatch):
     data = response.json()
     assert data["total_score"] == 8
     assert data["scenarios"] == [{"id": "web-scale", "status": "completed", "score": 8}]
+
+
+def test_scenario_detail_nav_shows_total_score_server_rendered(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))
+    response = client.get("/scenario/web-scale")
+    assert response.status_code == 200
+    assert 'id="total-score"' in response.text
+    assert "Score: 8" in response.text
+
+
+def test_not_found_page_nav_shows_total_score(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))
+    response = client.get("/scenario/nope")
+    assert response.status_code == 404
+    assert "Score: 8" in response.text
+
+
+def test_scenario_state_api_includes_total_score(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))
+    response = client.get("/api/scenario/web-scale/state")
+    assert response.json()["total_score"] == 8
