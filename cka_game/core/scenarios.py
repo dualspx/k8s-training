@@ -31,6 +31,8 @@ class ScenarioLoadError(Exception):
 
 
 def _scenario_from_dict(scenario_id: str, raw: dict) -> Scenario:
+    if not isinstance(raw, dict):
+        raise ScenarioLoadError(f"expected a YAML mapping, got {type(raw).__name__}")
     missing = [f for f in REQUIRED_FIELDS if f not in raw]
     if missing:
         raise ScenarioLoadError(f"missing required field(s): {', '.join(missing)}")

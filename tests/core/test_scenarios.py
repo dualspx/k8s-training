@@ -51,6 +51,33 @@ def test_skips_malformed_scenario_and_logs_warning(tmp_path, caplog):
     assert "bad.yaml" in caplog.text
 
 
+def test_skips_scalar_yaml_scenario_and_logs_warning(tmp_path, caplog):
+    (tmp_path / "good.yaml").write_text(VALID_YAML)
+    (tmp_path / "scalar.yaml").write_text("42\n")
+    with caplog.at_level(logging.WARNING):
+        scenarios = load_scenarios(tmp_path)
+    assert [s.id for s in scenarios] == ["good"]
+    assert "scalar.yaml" in caplog.text
+
+
+def test_skips_scenario_with_id_mismatch_and_logs_warning(tmp_path, caplog):
+    (tmp_path / "foo.yaml").write_text(
+        """
+title: Mismatched Id
+description: Id does not match filename.
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+id: bar
+"""
+    )
+    with caplog.at_level(logging.WARNING):
+        scenarios = load_scenarios(tmp_path)
+    assert scenarios == []
+    assert "foo.yaml" in caplog.text
+
+
 def test_load_scenario_returns_none_for_unknown_id(tmp_path):
     assert load_scenario(tmp_path, "nope") is None
 
