@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressStore
 from cka_game.core.scenarios import (
     Scenario,
@@ -18,8 +19,6 @@ from cka_game.core.scenarios import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-SCENARIOS_DIR = Path("scenarios")
-PROGRESS_PATH = Path("data/progress.json")
 
 
 def create_app() -> FastAPI:

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
 from cka_game.core.kube import KindSafetyError, build_cluster_client
+from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.reset import run_reset
 from cka_game.core.scenarios import load_scenario, load_scenarios
@@ -16,9 +15,6 @@ from cka_game.core.verify import run_verify
 
 app = typer.Typer(help="CKA scenario game")
 console = Console()
-
-SCENARIOS_DIR = Path("scenarios")
-PROGRESS_PATH = Path("data/progress.json")
 
 
 def _progress_store() -> ProgressStore:
