@@ -4,7 +4,11 @@ import os
 
 from kubernetes import config as k8s_config
 from kubernetes.dynamic import DynamicClient
-from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.dynamic.exceptions import (
+    NotFoundError,
+    ResourceNotFoundError,
+    ResourceNotUniqueError,
+)
 
 KIND_API_VERSIONS = {
     "Namespace": "v1",
@@ -46,9 +50,16 @@ class DynamicClusterClient:
 
     def _resource(self, kind: str):
         api_version = KIND_API_VERSIONS.get(kind)
-        if api_version is None:
-            raise ValueError(f"Unsupported kind: {kind}")
-        return self._dc.resources.get(api_version=api_version, kind=kind)
+        if api_version is not None:
+            return self._dc.resources.get(api_version=api_version, kind=kind)
+        # Kind isn't in our fixed whitelist (e.g. StatefulSet, ConfigMap,
+        # Secret, Ingress, DaemonSet). Fall back to dynamic discovery by
+        # kind name alone — this works when the kind is unambiguous across
+        # API groups on the cluster. Only raise if that also fails.
+        try:
+            return self._dc.resources.get(kind=kind)
+        except (ResourceNotFoundError, ResourceNotUniqueError) as exc:
+            raise ValueError(f"Unsupported kind: {kind}") from exc
 
     def get(self, kind: str, namespace: str | None, name: str) -> dict | None:
         resource = self._resource(kind)
