@@ -149,8 +149,22 @@ def create_app() -> FastAPI:
             if value:
                 # Coerce like YAML itself would (matching how hand-authored
                 # scenario YAML types its values): "5" -> 5, "true" -> True,
-                # bare strings like "NodePort" stay strings.
-                check["value"] = yaml.safe_load(value)
+                # bare strings like "NodePort" stay strings. Only accept the
+                # parse when it actually produced an int/float/bool -- other
+                # results (a YAMLError, or YAML 1.1 oddities like "0755" ->
+                # octal, "12:30" -> sexagesimal, "2024-01-01" -> a date, or a
+                # cron-schedule string like "*/2 * * * *" which YAML treats
+                # as an alias and fails to parse) all fall back to the raw
+                # string so authoring never 500s and non-numeric values are
+                # preserved verbatim.
+                try:
+                    coerced = yaml.safe_load(value)
+                except yaml.YAMLError:
+                    coerced = value
+                if isinstance(coerced, (int, float, bool)):
+                    check["value"] = coerced
+                else:
+                    check["value"] = value
             count = form.getlist("check_count")[i]
             if count:
                 check["count"] = int(count)

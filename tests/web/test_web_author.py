@@ -157,6 +157,63 @@ def test_edit_scenario_via_form_coerces_check_value_to_int(tmp_path, monkeypatch
     assert isinstance(scenario.verify[0]["value"], int)
 
 
+def test_edit_scenario_via_form_preserves_cron_schedule_string(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    (scenarios_dir / "workloads-cronjob.yaml").write_text(
+        """
+title: Create a CronJob
+description: Create a CronJob that runs every 2 minutes.
+category: workloads
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints: []
+answer: "kubectl create cronjob print-date --image=busybox --schedule=\\"*/2 * * * *\\" -n ns"
+verify:
+  - type: field_equals
+    kind: CronJob
+    namespace: ns
+    name: print-date
+    field: spec.schedule
+    value: "*/2 * * * *"
+reset:
+  - kind: Namespace
+    name: ns
+"""
+    )
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "workloads-cronjob",
+            "title": "Create a CronJob",
+            "description": "Create a CronJob that runs every 2 minutes.",
+            "category": "workloads",
+            "difficulty": "medium",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "",
+            "answer": 'kubectl create cronjob print-date --image=busybox --schedule="*/2 * * * *" -n ns',
+            "reset_namespace": "ns",
+            "check_type": ["field_equals"],
+            "check_kind": ["CronJob"],
+            "check_namespace": ["ns"],
+            "check_name": ["print-date"],
+            "check_selector": [""],
+            "check_field": ["spec.schedule"],
+            "check_value": ["*/2 * * * *"],
+            "check_count": [""],
+            "check_container": [""],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "workloads-cronjob")
+    assert scenario.verify[0]["value"] == "*/2 * * * *"
+    assert isinstance(scenario.verify[0]["value"], str)
+
+
 def test_edit_scenario_via_form_preserves_non_namespace_reset_steps(tmp_path, monkeypatch):
     client, scenarios_dir = _client(tmp_path, monkeypatch)
     (scenarios_dir / "storage-pv-pvc.yaml").write_text(
