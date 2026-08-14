@@ -6,9 +6,12 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from cka_game.core.kube import KindSafetyError, build_cluster_client
 from cka_game.core.progress import ProgressEntry, ProgressStore
+from cka_game.core.reset import run_reset
 from cka_game.core.scenarios import load_scenario, load_scenarios
 from cka_game.core.scoring import compute_score
+from cka_game.core.verify import run_verify
 
 app = typer.Typer(help="CKA scenario game")
 console = Console()
@@ -107,6 +110,69 @@ def score():
             completed += 1
     console.print(f"Score: {total}")
     console.print(f"Completed: {completed}/{len(scenarios)}")
+
+
+def _cluster_client_or_exit():
+    try:
+        return build_cluster_client()
+    except KindSafetyError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
+    except Exception:
+        console.print(
+            "[red]Cluster unreachable, is 'kind-cka-practice' running? "
+            "(try: kind get clusters)[/red]"
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def check(scenario_id: str):
+    scenario = _require_scenario(scenario_id)
+    client = _cluster_client_or_exit()
+    results = run_verify(scenario, client)
+    all_passed = True
+    for result in results:
+        icon = "[green]PASS[/green]" if result.passed else "[red]FAIL[/red]"
+        console.print(f"{icon} [{result.type}] {result.message}")
+        all_passed = all_passed and result.passed
+
+    store = _progress_store()
+    entry = store.get(scenario_id)
+    if all_passed:
+        if entry.status != "completed":
+            entry.score = compute_score(
+                scenario.points, scenario.hint_penalty, entry.hints_used, entry.answer_revealed
+            )
+            entry.status = "completed"
+            store.save(scenario_id, entry)
+        console.print(f"[bold green]Completed! Score: {entry.score}[/bold green]")
+    else:
+        if entry.status == "not_started":
+            entry.status = "in_progress"
+            store.save(scenario_id, entry)
+        console.print("[red]Not yet passing.[/red]")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def reset(scenario_id: str):
+    scenario = _require_scenario(scenario_id)
+    client = _cluster_client_or_exit()
+    messages = run_reset(scenario, client)
+    for message in messages:
+        console.print(message)
+    _progress_store().save(scenario_id, ProgressEntry())
+    console.print("[cyan]Lab reset. Progress for this scenario cleared.[/cyan]")
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000):
+    import uvicorn
+
+    from cka_game.web.app import create_app
+
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 def main():
