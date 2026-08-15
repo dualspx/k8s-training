@@ -47,3 +47,21 @@ def test_score_shows_player_header(tmp_path, monkeypatch):
     identity.set_player_name("Samad")
     result = runner.invoke(cli_main.app, ["score"])
     assert "Player: Samad" in result.stdout
+
+
+def test_whoami_set_with_rich_markup_is_shown_literally(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    set_result = runner.invoke(cli_main.app, ["whoami", "--set", "[red]x[/red]"])
+    assert set_result.exit_code == 0
+    assert "[red]x[/red]" in set_result.stdout
+    show_result = runner.invoke(cli_main.app, ["whoami"])
+    assert show_result.exit_code == 0
+    assert "[red]x[/red]" in show_result.stdout
+
+
+def test_list_with_rich_markup_player_name_is_shown_literally(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    identity.set_player_name("[red]x[/red]")
+    result = runner.invoke(cli_main.app, ["list"])
+    assert result.exit_code == 0
+    assert "[red]x[/red]" in result.stdout

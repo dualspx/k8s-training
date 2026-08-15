@@ -32,7 +32,7 @@ def _require_scenario(scenario_id: str):
 
 @app.command("list")
 def list_scenarios():
-    console.print(f"Player: {get_player_name()}")
+    console.print(f"Player: {escape(get_player_name())}")
     scenarios = load_scenarios(SCENARIOS_DIR)
     store = _progress_store()
     table = Table("ID", "Category", "Difficulty", "Points", "Status")
@@ -104,7 +104,7 @@ def reveal(scenario_id: str):
 
 @app.command()
 def score():
-    console.print(f"Player: {get_player_name()}")
+    console.print(f"Player: {escape(get_player_name())}")
     scenarios = load_scenarios(SCENARIOS_DIR)
     store = _progress_store()
     total = 0
@@ -122,11 +122,11 @@ def score():
 def whoami(name: str = typer.Option(None, "--set", help="Set your player name")):
     if name is not None:
         set_player_name(name)
-        console.print(f"[green]Player name set to '{name}'.[/green]")
+        console.print(f"[green]Player name set to '{escape(name)}'.[/green]")
         return
     current = get_player_name()
     source = "manually set" if is_player_name_set() else "auto-detected from OS login"
-    console.print(f"Player: {current} ({source})")
+    console.print(f"Player: {escape(current)} ({source})")
 
 
 def _cluster_client_or_exit():
