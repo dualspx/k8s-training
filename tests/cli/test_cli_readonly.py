@@ -76,6 +76,36 @@ def test_reveal_prints_answer_and_zeroes_score(tmp_path, monkeypatch):
     assert ProgressStore(progress_path).get("web-scale").answer_revealed is True
 
 
+def test_hint_on_completed_scenario_is_a_noop(tmp_path, monkeypatch):
+    _, progress_path = _setup(tmp_path, monkeypatch)
+    from cka_game.core.progress import ProgressStore
+
+    ProgressStore(progress_path).save(
+        "web-scale", ProgressEntry(status="completed", hints_used=1, score=8)
+    )
+    result = runner.invoke(cli_main.app, ["hint", "web-scale"])
+    assert result.exit_code == 0
+    assert "already completed" in result.stdout
+    entry = ProgressStore(progress_path).get("web-scale")
+    assert entry.hints_used == 1
+    assert entry.status == "completed"
+
+
+def test_reveal_on_completed_scenario_is_a_noop(tmp_path, monkeypatch):
+    _, progress_path = _setup(tmp_path, monkeypatch)
+    from cka_game.core.progress import ProgressStore
+
+    ProgressStore(progress_path).save(
+        "web-scale", ProgressEntry(status="completed", hints_used=0, score=10)
+    )
+    result = runner.invoke(cli_main.app, ["reveal", "web-scale"])
+    assert result.exit_code == 0
+    assert "already completed" in result.stdout
+    entry = ProgressStore(progress_path).get("web-scale")
+    assert entry.answer_revealed is False
+    assert entry.status == "completed"
+
+
 def test_score_sums_completed_scenarios(tmp_path, monkeypatch):
     _, progress_path = _setup(tmp_path, monkeypatch)
     from cka_game.core.progress import ProgressStore

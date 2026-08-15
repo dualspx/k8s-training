@@ -67,6 +67,9 @@ def hint(scenario_id: str):
     scenario = _require_scenario(scenario_id)
     store = _progress_store()
     entry = store.get(scenario_id)
+    if entry.status == "completed":
+        console.print("[yellow]This scenario is already completed.[/yellow]")
+        return
     if entry.hints_used >= len(scenario.hints):
         console.print("[yellow]No more hints for this scenario.[/yellow]")
         return
@@ -87,6 +90,9 @@ def reveal(scenario_id: str):
     scenario = _require_scenario(scenario_id)
     store = _progress_store()
     entry = store.get(scenario_id)
+    if entry.status == "completed":
+        console.print("[yellow]This scenario is already completed.[/yellow]")
+        return
     entry.answer_revealed = True
     if entry.status == "not_started":
         entry.status = "in_progress"
