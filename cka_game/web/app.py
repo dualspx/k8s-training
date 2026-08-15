@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from cka_game.core.identity import get_player_name
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressStore
 from cka_game.core.scenarios import (
@@ -46,7 +47,12 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "dashboard.html",
-            {"rows": rows, "total_score": total_score, "mode": _mode(request)},
+            {
+                "rows": rows,
+                "total_score": total_score,
+                "mode": _mode(request),
+                "player_name": get_player_name(),
+            },
         )
 
     @app.get("/scenario/{scenario_id}")
@@ -56,7 +62,12 @@ def create_app() -> FastAPI:
             return templates.TemplateResponse(
                 request,
                 "not_found.html",
-                {"scenario_id": scenario_id, "mode": _mode(request), "total_score": _total_score()},
+                {
+                    "scenario_id": scenario_id,
+                    "mode": _mode(request),
+                    "total_score": _total_score(),
+                    "player_name": get_player_name(),
+                },
                 status_code=404,
             )
         entry = store.get(scenario_id)
@@ -70,6 +81,7 @@ def create_app() -> FastAPI:
                 "revealed_hints": revealed_hints,
                 "mode": _mode(request),
                 "total_score": _total_score(),
+                "player_name": get_player_name(),
             },
         )
 
@@ -105,7 +117,12 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_list.html",
-            {"scenarios": scenarios, "mode": _mode(request), "total_score": _total_score()},
+            {
+                "scenarios": scenarios,
+                "mode": _mode(request),
+                "total_score": _total_score(),
+                "player_name": get_player_name(),
+            },
         )
 
     @app.get("/author/new")
@@ -113,7 +130,12 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_form.html",
-            {"scenario": None, "mode": _mode(request), "total_score": _total_score()},
+            {
+                "scenario": None,
+                "mode": _mode(request),
+                "total_score": _total_score(),
+                "player_name": get_player_name(),
+            },
         )
 
     @app.get("/author/{scenario_id}/edit")
@@ -122,7 +144,12 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "author_form.html",
-            {"scenario": scenario, "mode": _mode(request), "total_score": _total_score()},
+            {
+                "scenario": scenario,
+                "mode": _mode(request),
+                "total_score": _total_score(),
+                "player_name": get_player_name(),
+            },
         )
 
     @app.post("/author/scenario")
