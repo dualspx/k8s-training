@@ -26,12 +26,35 @@ class ProgressStore:
         if not self.path.exists():
             return {}
         try:
-            with self.path.open() as f:
-                raw = json.load(f)
-            return {sid: ProgressEntry(**data) for sid, data in raw.items()}
-        except (json.JSONDecodeError, TypeError, AttributeError) as exc:
+            # .read_text() can itself raise UnicodeDecodeError on a
+            # truncated/binary-garbage file, before json.loads() even runs.
+            # UnicodeDecodeError and json.JSONDecodeError are both
+            # ValueError subclasses, so catching ValueError here covers
+            # both "not valid text" and "not valid JSON" without widening
+            # the net to anything unintended.
+            raw = json.loads(self.path.read_text())
+        except ValueError as exc:
             logger.warning("ignoring corrupt progress file '%s': %s", self.path, exc)
             return {}
+        if not isinstance(raw, dict):
+            logger.warning(
+                "ignoring corrupt progress file '%s': expected a JSON object, got %s",
+                self.path,
+                type(raw).__name__,
+            )
+            return {}
+        entries: dict[str, ProgressEntry] = {}
+        for sid, data in raw.items():
+            try:
+                entries[sid] = ProgressEntry(**data)
+            except (TypeError, AttributeError) as exc:
+                # A single corrupt entry shouldn't destroy every other
+                # scenario's real progress -- skip just this one and keep
+                # the rest.
+                logger.warning(
+                    "skipping corrupt progress entry '%s' in '%s': %s", sid, self.path, exc
+                )
+        return entries
 
     def get(self, scenario_id: str) -> ProgressEntry:
         return self.load().get(scenario_id, ProgressEntry())

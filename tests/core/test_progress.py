@@ -57,3 +57,36 @@ def test_get_on_corrupt_file_returns_default_entry(tmp_path):
     path.write_text("not json at all")
     store = ProgressStore(path)
     assert store.get("anything") == ProgressEntry()
+
+
+def test_load_keeps_good_entries_when_one_entry_is_malformed(tmp_path, caplog):
+    path = tmp_path / "progress.json"
+    # "web-scale" is well-formed; "broken" isn't even a dict, so it can't
+    # be turned into a ProgressEntry. A single bad entry must not destroy
+    # every other scenario's real progress.
+    path.write_text(
+        '{"web-scale": {"status": "completed", "hints_used": 1, "score": 8}, '
+        '"broken": ["not", "a", "dict"]}'
+    )
+    store = ProgressStore(path)
+    with caplog.at_level(logging.WARNING):
+        result = store.load()
+    assert result == {
+        "web-scale": ProgressEntry(status="completed", hints_used=1, score=8)
+    }
+    assert any(
+        "broken" in record.message and "corrupt" in record.message
+        for record in caplog.records
+    )
+
+
+def test_load_with_invalid_utf8_bytes_warns_and_returns_empty(tmp_path, caplog):
+    path = tmp_path / "progress.json"
+    # Continuation bytes with no leading byte: not valid UTF-8, so
+    # .read_text() raises UnicodeDecodeError before json.loads() even runs.
+    path.write_bytes(b"\x80\x81\x82\x83")
+    store = ProgressStore(path)
+    with caplog.at_level(logging.WARNING):
+        result = store.load()
+    assert result == {}
+    assert any("corrupt" in record.message for record in caplog.records)
