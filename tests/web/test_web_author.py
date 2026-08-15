@@ -443,3 +443,59 @@ reset:
     scenario = load_scenario(scenarios_dir, "storage-pv-pvc")
     assert {"kind": "PersistentVolume", "name": "scenario-storage-pvpvc-pv"} in scenario.reset
     assert {"kind": "Namespace", "name": "scenario-storage-pvpvc"} in scenario.reset
+
+
+def test_edit_scenario_via_form_clears_extra_reset_steps_when_checkbox_checked(
+    tmp_path, monkeypatch
+):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    (scenarios_dir / "storage-pv-pvc.yaml").write_text(
+        """
+title: Bind a PersistentVolumeClaim
+description: Bind a PVC.
+category: storage
+difficulty: medium
+points: 10
+hint_penalty: 2
+hints: []
+answer: "kubectl apply -f pv.yaml"
+verify: []
+reset:
+  - kind: Namespace
+    name: scenario-storage-pvpvc
+  - kind: PersistentVolume
+    name: scenario-storage-pvpvc-pv
+"""
+    )
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "storage-pv-pvc",
+            "title": "Bind a PersistentVolumeClaim",
+            "description": "Bind a PVC.",
+            "category": "storage",
+            "difficulty": "medium",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "",
+            "answer": "kubectl apply -f pv.yaml",
+            "reset_namespace": "scenario-storage-pvpvc",
+            "clear_extra_reset_steps": "1",
+            "check_type": [],
+            "check_kind": [],
+            "check_namespace": [],
+            "check_name": [],
+            "check_selector": [],
+            "check_field": [],
+            "check_value": [],
+            "check_count": [],
+            "check_container": [],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "storage-pv-pvc")
+    assert scenario.reset == [{"kind": "Namespace", "name": "scenario-storage-pvpvc"}]
+    assert {"kind": "PersistentVolume", "name": "scenario-storage-pvpvc-pv"} not in scenario.reset

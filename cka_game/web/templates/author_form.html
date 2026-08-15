@@ -25,6 +25,8 @@
   <label>Answer<br><textarea name="answer">{{ scenario.answer if scenario else '' }}</textarea></label><br>
   <label>Reset namespace (deleted on reset)<br>
     <input name="reset_namespace" value="{{ scenario.reset[0].name if scenario and scenario.reset else '' }}"></label><br>
+  <label><input type="checkbox" name="clear_extra_reset_steps" value="1">
+    Clear extra reset steps (PV deletions, etc.) not covered by the namespace field above</label><br>
 
   <h2>Verify checks</h2>
   <table id="check-table">

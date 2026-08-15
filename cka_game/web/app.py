@@ -227,9 +227,11 @@ def create_app() -> FastAPI:
         # Preserve any non-Namespace reset steps (e.g. a PersistentVolume
         # deletion) already present on the existing scenario when editing,
         # since the form only ever exposes a single namespace field and
-        # would otherwise silently discard them.
+        # would otherwise silently discard them -- unless the author
+        # explicitly asks to clear them via the checkbox below.
+        clear_extra_reset_steps = bool(form.get("clear_extra_reset_steps"))
         existing = load_scenario(SCENARIOS_DIR, scenario_id)
-        if existing is not None:
+        if existing is not None and not clear_extra_reset_steps:
             other_steps = [step for step in existing.reset if step.get("kind") != "Namespace"]
             reset = ([{"kind": "Namespace", "name": reset_namespace}] if reset_namespace else []) + other_steps
         else:
