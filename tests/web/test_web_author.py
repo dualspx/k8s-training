@@ -108,6 +108,40 @@ def test_create_scenario_via_form_writes_yaml(tmp_path, monkeypatch):
     assert scenario.reset == [{"kind": "Namespace", "name": "ns2"}]
 
 
+def test_create_scenario_via_form_rejects_path_traversal_id(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "../../evil",
+            "title": "Evil",
+            "description": "Evil.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "",
+            "answer": "",
+            "reset_namespace": "",
+            "check_type": [],
+            "check_kind": [],
+            "check_namespace": [],
+            "check_name": [],
+            "check_selector": [],
+            "check_field": [],
+            "check_value": [],
+            "check_count": [],
+            "check_container": [],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    # nothing was written inside scenarios/, nor anywhere outside it
+    assert list(scenarios_dir.glob("*.yaml")) == [scenarios_dir / "web-scale.yaml"]
+    assert not (tmp_path / "evil.yaml").exists()
+    assert not (tmp_path.parent / "evil.yaml").exists()
+
+
 def test_delete_scenario_via_form(tmp_path, monkeypatch):
     client, scenarios_dir = _client(tmp_path, monkeypatch)
     response = client.post("/author/scenario/web-scale/delete", follow_redirects=False)
@@ -120,6 +154,46 @@ def test_mode_toggle_sets_cookie(tmp_path, monkeypatch):
     response = client.post("/mode/senior", follow_redirects=False)
     assert response.status_code == 303
     assert response.cookies["cka_game_mode"] == "senior"
+
+
+def test_mode_toggle_cookie_has_samesite_lax(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.post("/mode/senior", follow_redirects=False)
+    set_cookie = response.headers["set-cookie"]
+    assert "samesite=lax" in set_cookie.lower()
+
+
+def test_mode_toggle_rejects_external_referer(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/mode/senior",
+        headers={"referer": "http://evil.com/x"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+
+
+def test_mode_toggle_rejects_protocol_relative_referer(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/mode/senior",
+        headers={"referer": "//evil.com"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+
+
+def test_mode_toggle_honors_same_app_referer(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/mode/senior",
+        headers={"referer": "/scenario/foo"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/scenario/foo"
 
 
 def test_edit_scenario_via_form_coerces_check_value_to_int(tmp_path, monkeypatch):

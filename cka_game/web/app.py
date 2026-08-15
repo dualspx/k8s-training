@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -217,6 +217,13 @@ def create_app() -> FastAPI:
         reset_namespace = form.get("reset_namespace", "")
         scenario_id = form.get("id", "").strip()
 
+        if not _SCENARIO_ID_RE.fullmatch(scenario_id):
+            return PlainTextResponse(
+                "Invalid scenario id: must be lowercase letters, digits, and "
+                "hyphens, starting with a letter or digit.",
+                status_code=400,
+            )
+
         # Preserve any non-Namespace reset steps (e.g. a PersistentVolume
         # deletion) already present on the existing scenario when editing,
         # since the form only ever exposes a single namespace field and
@@ -252,8 +259,16 @@ def create_app() -> FastAPI:
     @app.post("/mode/{mode}")
     def set_mode(mode: str, request: Request):
         referer = request.headers.get("referer", "/")
+        # Only redirect back to a same-origin, relative-looking path. A
+        # Referer starting with "//" is browser-interpreted as
+        # protocol-relative to an external host, and an absolute URL
+        # (http://evil.com/...) is an open redirect -- fall back to "/".
+        if not referer.startswith("/") or referer.startswith("//"):
+            referer = "/"
         response = RedirectResponse(referer, status_code=303)
-        response.set_cookie("cka_game_mode", mode)
+        response.set_cookie(
+            "cka_game_mode", mode, samesite="lax", max_age=60 * 60 * 24 * 30
+        )
         return response
 
     return app
