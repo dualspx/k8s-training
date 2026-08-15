@@ -149,6 +149,17 @@ def test_delete_scenario_via_form(tmp_path, monkeypatch):
     assert not (scenarios_dir / "web-scale.yaml").exists()
 
 
+def test_delete_scenario_rejects_invalid_scenario_id(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    # Starlette's routing doesn't let path-traversal characters reach this
+    # handler, but an id with characters outside the safe-filename
+    # allowlist (e.g. an underscore or uppercase letters) IS routable and
+    # should still be rejected before delete_scenario() is ever called.
+    response = client.post("/author/scenario/Not_Valid/delete", follow_redirects=False)
+    assert response.status_code == 400
+    assert (scenarios_dir / "web-scale.yaml").exists()
+
+
 def test_mode_toggle_sets_cookie(tmp_path, monkeypatch):
     client, _ = _client(tmp_path, monkeypatch)
     response = client.post("/mode/senior", follow_redirects=False)

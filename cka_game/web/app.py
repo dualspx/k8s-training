@@ -288,6 +288,12 @@ def create_app() -> FastAPI:
 
     @app.post("/author/scenario/{scenario_id}/delete")
     def author_delete(scenario_id: str):
+        if not _SCENARIO_ID_RE.fullmatch(scenario_id):
+            return PlainTextResponse(
+                "Invalid scenario id: must be lowercase letters, digits, and "
+                "hyphens, starting with a letter or digit.",
+                status_code=400,
+            )
         delete_scenario(SCENARIOS_DIR, scenario_id)
         return RedirectResponse("/author", status_code=303)
 
