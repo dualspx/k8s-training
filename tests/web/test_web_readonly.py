@@ -64,6 +64,14 @@ def test_scenario_state_api_reflects_progress(tmp_path, monkeypatch):
     assert data["hints_revealed"] == ["first hint"]
 
 
+def test_scenario_state_api_unknown_id_returns_404(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.get("/api/scenario/nonexistent/state")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["error"] == "not found"
+
+
 def test_dashboard_state_api_sums_total_score(tmp_path, monkeypatch):
     client, progress_path = _client(tmp_path, monkeypatch)
     ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))

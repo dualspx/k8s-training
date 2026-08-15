@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -100,7 +100,7 @@ def create_app() -> FastAPI:
     def scenario_state(scenario_id: str):
         scenario = load_scenario(SCENARIOS_DIR, scenario_id)
         if scenario is None:
-            return {"error": "not found"}
+            return JSONResponse({"error": "not found"}, status_code=404)
         entry = store.get(scenario_id)
         return {
             "status": entry.status,
