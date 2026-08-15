@@ -46,6 +46,8 @@ safety guard below).
 ## Playing (junior mode)
 
 ```bash
+.venv/bin/cka-game whoami                     # see who you're playing as
+.venv/bin/cka-game whoami --set "Your Name"   # override the auto-detected OS username
 .venv/bin/cka-game list                 # see all scenarios and your status
 .venv/bin/cka-game show <scenario-id>   # read the description + hints so far
 .venv/bin/cka-game hint <scenario-id>   # reveal the next hint (costs points)
