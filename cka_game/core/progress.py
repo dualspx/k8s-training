@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -22,9 +25,13 @@ class ProgressStore:
     def load(self) -> dict[str, ProgressEntry]:
         if not self.path.exists():
             return {}
-        with self.path.open() as f:
-            raw = json.load(f)
-        return {sid: ProgressEntry(**data) for sid, data in raw.items()}
+        try:
+            with self.path.open() as f:
+                raw = json.load(f)
+            return {sid: ProgressEntry(**data) for sid, data in raw.items()}
+        except (json.JSONDecodeError, TypeError, AttributeError) as exc:
+            logger.warning("ignoring corrupt progress file '%s': %s", self.path, exc)
+            return {}
 
     def get(self, scenario_id: str) -> ProgressEntry:
         return self.load().get(scenario_id, ProgressEntry())

@@ -1,3 +1,5 @@
+import logging
+
 from cka_game.core.progress import ProgressEntry, ProgressStore
 
 
@@ -27,3 +29,31 @@ def test_save_preserves_other_entries(tmp_path):
     store.save("b", ProgressEntry(status="in_progress"))
     assert store.get("a").status == "completed"
     assert store.get("b").status == "in_progress"
+
+
+def test_load_with_invalid_json_syntax_warns_and_returns_empty(tmp_path, caplog):
+    path = tmp_path / "progress.json"
+    path.write_text("{not valid json")
+    store = ProgressStore(path)
+    with caplog.at_level(logging.WARNING):
+        result = store.load()
+    assert result == {}
+    assert any("corrupt" in record.message for record in caplog.records)
+
+
+def test_load_with_malformed_entry_warns_and_returns_empty(tmp_path, caplog):
+    path = tmp_path / "progress.json"
+    # valid JSON, but the entry has an unexpected key ProgressEntry doesn't accept
+    path.write_text('{"web-scale": {"status": "completed", "bogus_field": 1}}')
+    store = ProgressStore(path)
+    with caplog.at_level(logging.WARNING):
+        result = store.load()
+    assert result == {}
+    assert any("corrupt" in record.message for record in caplog.records)
+
+
+def test_get_on_corrupt_file_returns_default_entry(tmp_path):
+    path = tmp_path / "progress.json"
+    path.write_text("not json at all")
+    store = ProgressStore(path)
+    assert store.get("anything") == ProgressEntry()
