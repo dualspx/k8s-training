@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import yaml
 from fastapi import FastAPI, Request
@@ -32,6 +33,25 @@ BASE_DIR = Path(__file__).resolve().parent
 _INT_RE = re.compile(r"-?(0|[1-9]\d*)")
 _FLOAT_RE = re.compile(r"-?(0|[1-9]\d*)\.\d+")
 _SCENARIO_ID_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
+
+
+def _safe_referer(referer: str, request: Request) -> str:
+    """Return a same-origin path safe to redirect to, else "/".
+
+    Real browsers under the default Referrer-Policy send the FULL absolute
+    URL for same-origin navigations (e.g. "http://host/scenario/foo"), not a
+    bare relative path -- so we must parse the referer as a URL and compare
+    ORIGIN (scheme + host), not just its shape. A schemeless value is only
+    accepted if it's a genuine relative path; "//evil.com" is rejected since
+    browsers treat a leading "//" as protocol-relative to an external host.
+    """
+    parts = urlsplit(referer)
+    if parts.scheme or parts.netloc:
+        same_origin = (parts.scheme, parts.netloc) == (request.url.scheme, request.url.netloc)
+        return (parts.path or "/") if same_origin else "/"
+    if not parts.path.startswith("/") or parts.path.startswith("//"):
+        return "/"
+    return parts.path
 
 
 def create_app() -> FastAPI:
@@ -273,13 +293,7 @@ def create_app() -> FastAPI:
 
     @app.post("/mode/{mode}")
     def set_mode(mode: str, request: Request):
-        referer = request.headers.get("referer", "/")
-        # Only redirect back to a same-origin, relative-looking path. A
-        # Referer starting with "//" is browser-interpreted as
-        # protocol-relative to an external host, and an absolute URL
-        # (http://evil.com/...) is an open redirect -- fall back to "/".
-        if not referer.startswith("/") or referer.startswith("//"):
-            referer = "/"
+        referer = _safe_referer(request.headers.get("referer", "/"), request)
         response = RedirectResponse(referer, status_code=303)
         response.set_cookie(
             "cka_game_mode", mode, samesite="lax", max_age=60 * 60 * 24 * 30

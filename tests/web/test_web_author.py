@@ -196,6 +196,22 @@ def test_mode_toggle_honors_same_app_referer(tmp_path, monkeypatch):
     assert response.headers["location"] == "/scenario/foo"
 
 
+def test_mode_toggle_honors_absolute_same_origin_referer(tmp_path, monkeypatch):
+    # Real browsers under the default strict-origin-when-cross-origin
+    # Referrer-Policy send the FULL absolute URL for same-origin
+    # navigations, not a bare relative path. FastAPI's TestClient sees
+    # requests as arriving at "http://testserver/...", so a same-origin
+    # absolute referer must round-trip to its path, not fall back to "/".
+    client, _ = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/mode/senior",
+        headers={"referer": "http://testserver/scenario/foo"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/scenario/foo"
+
+
 def test_edit_scenario_via_form_coerces_check_value_to_int(tmp_path, monkeypatch):
     client, scenarios_dir = _client(tmp_path, monkeypatch)
     response = client.post(
