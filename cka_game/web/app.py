@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -20,6 +21,16 @@ from cka_game.core.scenarios import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Strict allowlist for check_value coercion: only trust yaml.safe_load's
+# int/float parse when the ORIGINAL STRING is itself a plain decimal
+# integer or float. This deliberately excludes strings YAML 1.1 also
+# happens to parse as numbers via non-decimal readings -- e.g. "0755"
+# (octal -> 493) and "12:30" (sexagesimal -> 750) -- which authors would
+# only ever intend as literal strings.
+_INT_RE = re.compile(r"-?(0|[1-9]\d*)")
+_FLOAT_RE = re.compile(r"-?(0|[1-9]\d*)\.\d+")
+_SCENARIO_ID_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 
 def create_app() -> FastAPI:
@@ -176,20 +187,23 @@ def create_app() -> FastAPI:
             if value:
                 # Coerce like YAML itself would (matching how hand-authored
                 # scenario YAML types its values): "5" -> 5, "true" -> True,
-                # bare strings like "NodePort" stay strings. Only accept the
-                # parse when it actually produced an int/float/bool -- other
-                # results (a YAMLError, or YAML 1.1 oddities like "0755" ->
-                # octal, "12:30" -> sexagesimal, "2024-01-01" -> a date, or a
-                # cron-schedule string like "*/2 * * * *" which YAML treats
-                # as an alias and fails to parse) all fall back to the raw
-                # string so authoring never 500s and non-numeric values are
-                # preserved verbatim.
-                try:
-                    coerced = yaml.safe_load(value)
-                except yaml.YAMLError:
-                    coerced = value
-                if isinstance(coerced, (int, float, bool)):
-                    check["value"] = coerced
+                # bare strings like "NodePort" stay strings. This is an
+                # intentional, narrow allowlist rather than "whatever YAML
+                # 1.1 happens to parse" -- only a plain decimal int/float or
+                # an explicit true/false literal is coerced. Everything else
+                # (bare strings, a cron-schedule string like "*/2 * * * *",
+                # or YAML 1.1 oddities like "0755" -> octal 493 or "12:30"
+                # -> sexagesimal 750) is preserved verbatim as a string, so
+                # authoring never 500s and non-numeric-looking values are
+                # never silently reinterpreted.
+                if value.lower() in ("true", "false"):
+                    check["value"] = value.lower() == "true"
+                elif _INT_RE.fullmatch(value) or _FLOAT_RE.fullmatch(value):
+                    try:
+                        coerced = yaml.safe_load(value)
+                    except yaml.YAMLError:
+                        coerced = value
+                    check["value"] = coerced if isinstance(coerced, (int, float)) else value
                 else:
                     check["value"] = value
             count = form.getlist("check_count")[i]

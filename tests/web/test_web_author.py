@@ -214,6 +214,110 @@ reset:
     assert isinstance(scenario.verify[0]["value"], str)
 
 
+def test_edit_scenario_via_form_preserves_octal_looking_string(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "web-scale",
+            "title": "Scale a Deployment",
+            "description": "Scale web to 5 replicas.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "first hint",
+            "answer": "kubectl scale deployment web --replicas=5",
+            "reset_namespace": "ns",
+            "check_type": ["field_equals"],
+            "check_kind": ["Pod"],
+            "check_namespace": ["ns"],
+            "check_name": ["web"],
+            "check_selector": [""],
+            "check_field": ["spec.mode"],
+            "check_value": ["0755"],
+            "check_count": [""],
+            "check_container": [""],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "web-scale")
+    assert scenario.verify[0]["value"] == "0755"
+    assert isinstance(scenario.verify[0]["value"], str)
+
+
+def test_edit_scenario_via_form_preserves_sexagesimal_looking_string(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "web-scale",
+            "title": "Scale a Deployment",
+            "description": "Scale web to 5 replicas.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "first hint",
+            "answer": "kubectl scale deployment web --replicas=5",
+            "reset_namespace": "ns",
+            "check_type": ["field_equals"],
+            "check_kind": ["Pod"],
+            "check_namespace": ["ns"],
+            "check_name": ["web"],
+            "check_selector": [""],
+            "check_field": ["spec.time"],
+            "check_value": ["12:30"],
+            "check_count": [""],
+            "check_container": [""],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "web-scale")
+    assert scenario.verify[0]["value"] == "12:30"
+    assert isinstance(scenario.verify[0]["value"], str)
+
+
+def test_edit_scenario_via_form_coerces_bool_check_value(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "web-scale",
+            "title": "Scale a Deployment",
+            "description": "Scale web to 5 replicas.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "first hint",
+            "answer": "kubectl scale deployment web --replicas=5",
+            "reset_namespace": "ns",
+            "check_type": ["field_equals"],
+            "check_kind": ["Pod"],
+            "check_namespace": ["ns"],
+            "check_name": ["web"],
+            "check_selector": [""],
+            "check_field": ["spec.enabled"],
+            "check_value": ["true"],
+            "check_count": [""],
+            "check_container": [""],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "web-scale")
+    assert scenario.verify[0]["value"] is True
+
+
 def test_edit_scenario_via_form_preserves_non_namespace_reset_steps(tmp_path, monkeypatch):
     client, scenarios_dir = _client(tmp_path, monkeypatch)
     (scenarios_dir / "storage-pv-pvc.yaml").write_text(
