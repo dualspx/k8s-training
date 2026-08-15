@@ -91,7 +91,9 @@ def test_hint_on_completed_scenario_is_a_noop(tmp_path, monkeypatch):
     assert entry.status == "completed"
 
 
-def test_reveal_on_completed_scenario_is_a_noop(tmp_path, monkeypatch):
+def test_reveal_on_completed_scenario_still_shows_answer_without_changing_state(
+    tmp_path, monkeypatch
+):
     _, progress_path = _setup(tmp_path, monkeypatch)
     from cka_game.core.progress import ProgressStore
 
@@ -100,10 +102,12 @@ def test_reveal_on_completed_scenario_is_a_noop(tmp_path, monkeypatch):
     )
     result = runner.invoke(cli_main.app, ["reveal", "web-scale"])
     assert result.exit_code == 0
-    assert "already completed" in result.stdout
+    assert "kubectl scale deployment web --replicas=5" in result.stdout
+    assert "Already completed" in result.stdout
     entry = ProgressStore(progress_path).get("web-scale")
     assert entry.answer_revealed is False
     assert entry.status == "completed"
+    assert entry.score == 10
 
 
 def test_score_sums_completed_scenarios(tmp_path, monkeypatch):

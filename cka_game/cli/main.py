@@ -90,16 +90,18 @@ def reveal(scenario_id: str):
     scenario = _require_scenario(scenario_id)
     store = _progress_store()
     entry = store.get(scenario_id)
-    if entry.status == "completed":
-        console.print("[yellow]This scenario is already completed.[/yellow]")
-        return
-    entry.answer_revealed = True
-    if entry.status == "not_started":
-        entry.status = "in_progress"
-    store.save(scenario_id, entry)
+    already_completed = entry.status == "completed"
+    if not already_completed:
+        entry.answer_revealed = True
+        if entry.status == "not_started":
+            entry.status = "in_progress"
+        store.save(scenario_id, entry)
     console.print("[bold]Answer:[/bold]")
     console.print(scenario.answer)
-    console.print("[yellow]Potential score for this scenario is now 0.[/yellow]")
+    if already_completed:
+        console.print(f"[green]Already completed. Score: {entry.score}[/green]")
+    else:
+        console.print("[yellow]Potential score for this scenario is now 0.[/yellow]")
 
 
 @app.command()
