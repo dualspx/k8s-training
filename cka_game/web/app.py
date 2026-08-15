@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from cka_game.core.identity import get_player_name
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
-from cka_game.core.progress import ProgressStore
+from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.scenarios import (
     Scenario,
     delete_scenario,
@@ -54,7 +54,10 @@ def create_app() -> FastAPI:
     @app.get("/")
     def dashboard(request: Request):
         scenarios = load_scenarios(SCENARIOS_DIR)
-        rows = [{"scenario": s, "entry": store.get(s.id)} for s in scenarios]
+        progress = store.load()
+        rows = [
+            {"scenario": s, "entry": progress.get(s.id, ProgressEntry())} for s in scenarios
+        ]
         total_score = sum(r["entry"].score for r in rows if r["entry"].status == "completed")
         return templates.TemplateResponse(
             request,
@@ -122,10 +125,11 @@ def create_app() -> FastAPI:
     @app.get("/api/dashboard/state")
     def dashboard_state():
         scenarios = load_scenarios(SCENARIOS_DIR)
+        progress = store.load()
         items = []
         total = 0
         for scenario in scenarios:
-            entry = store.get(scenario.id)
+            entry = progress.get(scenario.id, ProgressEntry())
             items.append({"id": scenario.id, "status": entry.status, "score": entry.score})
             if entry.status == "completed":
                 total += entry.score
