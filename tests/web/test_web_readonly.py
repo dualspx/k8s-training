@@ -64,6 +64,24 @@ def test_scenario_state_api_reflects_progress(tmp_path, monkeypatch):
     assert data["hints_revealed"] == ["first hint"]
 
 
+def test_scenario_detail_shows_potential_score_after_hint(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(hints_used=1))
+    response = client.get("/scenario/web-scale")
+    assert response.status_code == 200
+    # points=10, hint_penalty=2, hints_used=1 -> potential 8
+    assert 'id="potential-score"' in response.text
+    assert ">8<" in response.text.split('id="potential-score"')[1][:20]
+
+
+def test_scenario_state_api_includes_potential_score_after_hint(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(hints_used=1))
+    response = client.get("/api/scenario/web-scale/state")
+    assert response.status_code == 200
+    assert response.json()["potential_score"] == 8
+
+
 def test_scenario_state_api_unknown_id_returns_404(tmp_path, monkeypatch):
     client, _ = _client(tmp_path, monkeypatch)
     response = client.get("/api/scenario/nonexistent/state")

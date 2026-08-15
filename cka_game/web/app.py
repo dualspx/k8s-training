@@ -19,6 +19,7 @@ from cka_game.core.scenarios import (
     load_scenarios,
     save_scenario,
 )
+from cka_game.core.scoring import compute_score
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -83,6 +84,9 @@ def create_app() -> FastAPI:
             )
         entry = store.get(scenario_id)
         revealed_hints = scenario.hints[: entry.hints_used]
+        potential_score = compute_score(
+            scenario.points, scenario.hint_penalty, entry.hints_used, entry.answer_revealed
+        )
         return templates.TemplateResponse(
             request,
             "scenario.html",
@@ -90,6 +94,7 @@ def create_app() -> FastAPI:
                 "scenario": scenario,
                 "entry": entry,
                 "revealed_hints": revealed_hints,
+                "potential_score": potential_score,
                 "mode": _mode(request),
                 "total_score": _total_score(),
                 "player_name": get_player_name(),
@@ -102,10 +107,14 @@ def create_app() -> FastAPI:
         if scenario is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         entry = store.get(scenario_id)
+        potential_score = compute_score(
+            scenario.points, scenario.hint_penalty, entry.hints_used, entry.answer_revealed
+        )
         return {
             "status": entry.status,
             "hints_revealed": scenario.hints[: entry.hints_used],
             "score": entry.score,
+            "potential_score": potential_score,
             "answer_revealed": entry.answer_revealed,
             "total_score": _total_score(),
         }
