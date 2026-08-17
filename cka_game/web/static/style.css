@@ -10,5 +10,7 @@ th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #2a2f3a; }
 .difficulty-medium { color: #facc15; }
 .difficulty-hard { color: #f87171; }
 .cli-tip code { background: #1f2430; padding: 0.15rem 0.4rem; border-radius: 4px; }
+.needs-setup { color: #facc15; }
+.needs-setup code { background: #1f2430; padding: 0.15rem 0.4rem; border-radius: 4px; }
 form.mode-form { margin: 0; }
 button { cursor: pointer; }
