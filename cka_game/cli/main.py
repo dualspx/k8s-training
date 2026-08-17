@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import typer
@@ -8,7 +9,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from cka_game.core.identity import get_player_name, is_player_name_set, set_player_name
-from cka_game.core.kube import KindSafetyError, build_cluster_client
+from cka_game.core.kube import KindSafetyError, assert_ambient_context_is_safe, build_cluster_client
 from cka_game.core.markdown_scenario import MarkdownScenarioError, parse_markdown_scenario
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
@@ -148,6 +149,34 @@ def import_scenario(path: str):
         raise typer.Exit(code=1)
     save_scenario(SCENARIOS_DIR, scenario)
     console.print(f"[green]Imported scenario '{scenario_id}'.[/green]")
+
+
+@app.command()
+def start(scenario_id: str):
+    scenario = _require_scenario(scenario_id)
+    if scenario.setup:
+        try:
+            assert_ambient_context_is_safe()
+        except KindSafetyError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1)
+        try:
+            subprocess.run(["bash", "-c", scenario.setup], check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as exc:
+            console.print(f"[red]Setup failed: {exc.stderr}[/red]")
+            raise typer.Exit(code=1)
+        console.print("[green]Setup applied.[/green]")
+    else:
+        console.print(
+            "[yellow]No setup needed for this scenario — begin working on it as described.[/yellow]"
+        )
+
+    store = _progress_store()
+    entry = store.get(scenario_id)
+    if entry.status == "not_started":
+        entry.status = "in_progress"
+        store.save(scenario_id, entry)
+    console.print(f"Status: {entry.status}")
 
 
 def _cluster_client_or_exit():
