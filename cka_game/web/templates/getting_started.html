@@ -36,14 +36,19 @@ nodes:
 <h2>4. Start the game</h2>
 <p>You're already looking at the web board (that means <code>cka-game serve</code> is
   already running!). Next, in another terminal:</p>
-<pre><code>.venv/bin/cka-game whoami
-.venv/bin/cka-game start &lt;scenario-id&gt;
-.venv/bin/cka-game list
-.venv/bin/cka-game show &lt;scenario-id&gt;
-.venv/bin/cka-game hint &lt;scenario-id&gt;
-.venv/bin/cka-game check &lt;scenario-id&gt;
-.venv/bin/cka-game reveal &lt;scenario-id&gt;
-.venv/bin/cka-game reset &lt;scenario-id&gt;
-.venv/bin/cka-game score
+<p class="cli-tip">Tip: activate the virtualenv once per terminal session so you can
+  just type <code>cka-game</code> instead of <code>.venv/bin/cka-game</code> every
+  time. (A permanent alternative: <code>pipx install -e .</code> installs the
+  <code>cka-game</code> command globally, no activation needed.)</p>
+<pre><code>source .venv/bin/activate
+cka-game whoami
+cka-game start &lt;scenario-id&gt;
+cka-game list
+cka-game show &lt;scenario-id&gt;
+cka-game hint &lt;scenario-id&gt;
+cka-game check &lt;scenario-id&gt;
+cka-game reveal &lt;scenario-id&gt;
+cka-game reset &lt;scenario-id&gt;
+cka-game score
 </code></pre>
 {% endblock %}
