@@ -38,11 +38,35 @@ def cluster_client():
     return build_cluster_client()
 
 
+def _assert_pod_is_crash_looping(cluster_client):
+    """Proves the troubleshooting-crashloop-pod scenario's setup step
+    genuinely creates broken state, not just a Pod that happens to satisfy
+    the same verify checks the fixed version does. Polls briefly since the
+    container needs at least one failed run before kubelet reports it."""
+    for attempt in range(VERIFY_RETRY_ATTEMPTS):
+        pod = cluster_client.get(
+            "Pod", "scenario-troubleshooting-crashloop", "crashy"
+        )
+        if pod is not None:
+            statuses = pod.get("status", {}).get("containerStatuses", [])
+            if statuses and statuses[0].get("restartCount", 0) >= 1:
+                return
+        time.sleep(VERIFY_RETRY_DELAY_SECONDS)
+    raise AssertionError(
+        "troubleshooting-crashloop-pod's setup step did not produce a genuinely "
+        "restarting/crashing container within the retry budget"
+    )
+
+
 @pytest.mark.parametrize(
     "scenario", load_scenarios(SCENARIOS_DIR), ids=lambda s: s.id
 )
 def test_seed_scenario_answer_satisfies_its_own_verify(scenario, cluster_client):
     try:
+        if scenario.setup:
+            subprocess.run(["bash", "-c", scenario.setup], check=True, capture_output=True, text=True)
+            if scenario.id == "troubleshooting-crashloop-pod":
+                _assert_pod_is_crash_looping(cluster_client)
         subprocess.run(["bash", "-c", scenario.answer], check=True, capture_output=True, text=True)
         failures = []
         for attempt in range(VERIFY_RETRY_ATTEMPTS):
