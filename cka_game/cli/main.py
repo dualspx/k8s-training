@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.markup import escape
@@ -7,10 +9,11 @@ from rich.table import Table
 
 from cka_game.core.identity import get_player_name, is_player_name_set, set_player_name
 from cka_game.core.kube import KindSafetyError, build_cluster_client
+from cka_game.core.markdown_scenario import MarkdownScenarioError, parse_markdown_scenario
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.reset import run_reset
-from cka_game.core.scenarios import load_scenario, load_scenarios
+from cka_game.core.scenarios import load_scenario, load_scenarios, save_scenario
 from cka_game.core.scoring import compute_score
 from cka_game.core.verify import run_verify
 
@@ -129,6 +132,22 @@ def whoami(name: str = typer.Option(None, "--set", help="Set your player name"))
     current = get_player_name()
     source = "manually set" if is_player_name_set() else "auto-detected from OS login"
     console.print(f"Player: {escape(current)} ({source})")
+
+
+@app.command("import-scenario")
+def import_scenario(path: str):
+    md_path = Path(path)
+    if not md_path.exists():
+        console.print(f"[red]No such file: {path}[/red]")
+        raise typer.Exit(code=1)
+    scenario_id = md_path.stem
+    try:
+        scenario = parse_markdown_scenario(md_path.read_text(), scenario_id)
+    except MarkdownScenarioError as exc:
+        console.print(f"[red]Failed to parse {path}: {exc}[/red]")
+        raise typer.Exit(code=1)
+    save_scenario(SCENARIOS_DIR, scenario)
+    console.print(f"[green]Imported scenario '{scenario_id}'.[/green]")
 
 
 def _cluster_client_or_exit():
