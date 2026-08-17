@@ -9,8 +9,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from kubernetes.dynamic.exceptions import ConflictError
 
-from cka_game.core.identity import get_player_name
+from cka_game.core.identity import (
+    get_player_name,
+    is_player_name_set,
+    player_namespace,
+    set_player_name,
+)
+from cka_game.core.kube import KindSafetyError, build_cluster_client
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.scenarios import (
@@ -70,6 +77,18 @@ def create_app() -> FastAPI:
             if entry.status == "completed":
                 total += entry.score
         return total
+
+    def _getting_started_context(request: Request, error: str | None = None) -> dict:
+        registered = is_player_name_set()
+        name = get_player_name()
+        return {
+            "mode": _mode(request),
+            "total_score": _total_score(),
+            "player_name": name,
+            "is_registered": registered,
+            "namespace": player_namespace(name) if registered else None,
+            "error": error,
+        }
 
     @app.get("/")
     def dashboard(request: Request):
@@ -155,6 +174,57 @@ def create_app() -> FastAPI:
             if entry.status == "completed":
                 total += entry.score
         return {"scenarios": items, "total_score": total}
+
+    @app.get("/getting-started")
+    def getting_started(request: Request):
+        return templates.TemplateResponse(
+            request, "getting_started.html", _getting_started_context(request)
+        )
+
+    @app.post("/getting-started/register")
+    async def register(request: Request):
+        form = await request.form()
+        name = form.get("name", "").strip()
+        if not name:
+            return templates.TemplateResponse(
+                request,
+                "getting_started.html",
+                _getting_started_context(request, error="Please enter a name."),
+            )
+        set_player_name(name)
+        namespace = player_namespace(name)
+        try:
+            client = build_cluster_client()
+            client.create(
+                "Namespace",
+                None,
+                {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": namespace}},
+            )
+        except ConflictError:
+            pass  # namespace already exists -- idempotent re-registration
+        except KindSafetyError as exc:
+            return templates.TemplateResponse(
+                request,
+                "getting_started.html",
+                _getting_started_context(
+                    request,
+                    error=f"Registered as {name}, but couldn't create your sandbox namespace: {exc}",
+                ),
+            )
+        except Exception:
+            return templates.TemplateResponse(
+                request,
+                "getting_started.html",
+                _getting_started_context(
+                    request,
+                    error=(
+                        f"Registered as {name}, but the cluster is unreachable -- your "
+                        "sandbox namespace wasn't created. Try again once the cluster is "
+                        "reachable."
+                    ),
+                ),
+            )
+        return RedirectResponse("/getting-started", status_code=303)
 
     @app.get("/author")
     def author_list(request: Request):
