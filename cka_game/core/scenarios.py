@@ -21,6 +21,7 @@ class Scenario:
     points: int
     hint_penalty: int
     hints: list[str] = field(default_factory=list)
+    setup: str = ""
     answer: str = ""
     verify: list[dict] = field(default_factory=list)
     reset: list[dict] = field(default_factory=list)
@@ -49,6 +50,7 @@ def _scenario_from_dict(scenario_id: str, raw: dict) -> Scenario:
         points=raw["points"],
         hint_penalty=raw["hint_penalty"],
         hints=raw.get("hints", []),
+        setup=raw.get("setup", ""),
         answer=raw.get("answer", ""),
         verify=raw.get("verify", []),
         reset=raw.get("reset", []),
@@ -88,6 +90,7 @@ def save_scenario(scenarios_dir: str | Path, scenario: Scenario) -> None:
         "points": scenario.points,
         "hint_penalty": scenario.hint_penalty,
         "hints": scenario.hints,
+        "setup": scenario.setup,
         "answer": scenario.answer,
         "verify": scenario.verify,
         "reset": scenario.reset,

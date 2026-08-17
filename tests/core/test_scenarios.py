@@ -110,3 +110,25 @@ def test_delete_scenario(tmp_path):
 
 def test_load_scenarios_on_missing_directory_returns_empty(tmp_path):
     assert load_scenarios(tmp_path / "does-not-exist") == []
+
+
+def test_setup_field_defaults_to_empty_string(tmp_path):
+    (tmp_path / "no-setup.yaml").write_text(VALID_YAML)
+    scenario = load_scenario(tmp_path, "no-setup")
+    assert scenario.setup == ""
+
+
+def test_setup_field_round_trips_through_save_and_load(tmp_path):
+    scenario = Scenario(
+        id="with-setup",
+        title="With Setup",
+        description="Desc",
+        category="workloads",
+        difficulty="easy",
+        points=5,
+        hint_penalty=1,
+        setup="kubectl create namespace foo",
+    )
+    save_scenario(tmp_path, scenario)
+    loaded = load_scenario(tmp_path, "with-setup")
+    assert loaded.setup == "kubectl create namespace foo"
