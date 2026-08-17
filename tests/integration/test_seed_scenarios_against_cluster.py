@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cka_game.core.kube import build_cluster_client, resolve_context
+from cka_game.core.kube import assert_ambient_context_is_safe, build_cluster_client
 from cka_game.core.reset import run_reset
 from cka_game.core.scenarios import load_scenarios
 from cka_game.core.verify import run_verify
@@ -32,22 +32,9 @@ EXTRA_CLEANUP = {
 }
 
 
-def _assert_ambient_context_is_safe():
-    safe_context = resolve_context()
-    ambient = subprocess.run(
-        ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
-    ).stdout.strip()
-    if ambient != safe_context:
-        pytest.fail(
-            f"Ambient kubectl context is '{ambient}' but the safety-guarded context is "
-            f"'{safe_context}'. Refusing to run integration tests — run "
-            f"'kubectl config use-context {safe_context}' first."
-        )
-
-
 @pytest.fixture(scope="module")
 def cluster_client():
-    _assert_ambient_context_is_safe()
+    assert_ambient_context_is_safe()
     return build_cluster_client()
 
 

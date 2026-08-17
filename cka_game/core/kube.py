@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 
 from kubernetes import config as k8s_config
 from kubernetes.dynamic import DynamicClient
@@ -42,6 +43,22 @@ def resolve_context(explicit: str | None = None) -> str:
             f"Refusing to target context '{context}': only 'kind-*' contexts are allowed."
         )
     return context
+
+
+def assert_ambient_context_is_safe() -> None:
+    """Raise KindSafetyError if the ambient `kubectl` context doesn't match
+    the guarded context. Call this before any subprocess-based kubectl
+    invocation (as opposed to calls through DynamicClusterClient, which is
+    already guarded via resolve_context())."""
+    safe_context = resolve_context()
+    ambient = subprocess.run(
+        ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    if ambient != safe_context:
+        raise KindSafetyError(
+            f"Ambient kubectl context is '{ambient}' but the safety-guarded context is "
+            f"'{safe_context}'. Run 'kubectl config use-context {safe_context}' first."
+        )
 
 
 class DynamicClusterClient:

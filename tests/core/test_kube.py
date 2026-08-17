@@ -1,5 +1,8 @@
+import types
+
 import pytest
 
+import cka_game.core.kube as kube
 from cka_game.core.kube import KindSafetyError, resolve_context
 
 
@@ -22,3 +25,24 @@ def test_resolve_context_rejects_non_kind_context(monkeypatch):
     monkeypatch.setenv("CKA_GAME_KUBE_CONTEXT", "samad@uoa")
     with pytest.raises(KindSafetyError):
         resolve_context()
+
+
+def test_assert_ambient_context_is_safe_passes_when_matching(monkeypatch):
+    monkeypatch.setenv("CKA_GAME_KUBE_CONTEXT", "kind-cka-practice")
+    monkeypatch.setattr(
+        kube.subprocess,
+        "run",
+        lambda *a, **k: types.SimpleNamespace(stdout="kind-cka-practice\n"),
+    )
+    kube.assert_ambient_context_is_safe()  # must not raise
+
+
+def test_assert_ambient_context_is_safe_raises_on_mismatch(monkeypatch):
+    monkeypatch.setenv("CKA_GAME_KUBE_CONTEXT", "kind-cka-practice")
+    monkeypatch.setattr(
+        kube.subprocess,
+        "run",
+        lambda *a, **k: types.SimpleNamespace(stdout="samad@uoa\n"),
+    )
+    with pytest.raises(kube.KindSafetyError):
+        kube.assert_ambient_context_is_safe()
