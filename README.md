@@ -43,6 +43,11 @@ context defaults to `kind-cka-practice` but can be overridden with the
 `CKA_GAME_KUBE_CONTEXT` env var (still must start with `kind-`, per the
 safety guard below).
 
+Once `cka-game serve` is running, open `http://localhost:8000/getting-started` for an
+in-browser walkthrough of all of the above, plus registering as a player (which also
+creates a personal sandbox namespace, `player-<your-name>`, for you to practice in
+freely) — everything below is also covered there.
+
 ## Playing (junior mode)
 
 ```bash
