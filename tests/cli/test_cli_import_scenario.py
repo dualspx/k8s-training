@@ -75,3 +75,15 @@ def test_import_scenario_malformed_markdown_exits_nonzero_without_writing(tmp_pa
 
     assert result.exit_code == 1
     assert not (scenarios_dir / "bad.yaml").exists()
+
+
+def test_import_scenario_invalid_id_exits_nonzero_without_writing(tmp_path, monkeypatch):
+    scenarios_dir = _setup(tmp_path, monkeypatch)
+    md_path = tmp_path / "My_Scenario.md"
+    md_path.write_text(VALID_MARKDOWN)
+
+    result = runner.invoke(cli_main.app, ["import-scenario", str(md_path)])
+
+    assert result.exit_code == 1
+    assert not (scenarios_dir / "My_Scenario.yaml").exists()
+    assert list(scenarios_dir.iterdir()) == []

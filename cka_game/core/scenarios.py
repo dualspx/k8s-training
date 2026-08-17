@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import yaml
 logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = ["title", "description", "category", "difficulty", "points", "hint_penalty"]
+
+SCENARIO_ID_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 
 @dataclass

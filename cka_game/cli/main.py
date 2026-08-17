@@ -14,7 +14,12 @@ from cka_game.core.markdown_scenario import MarkdownScenarioError, parse_markdow
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.reset import run_reset
-from cka_game.core.scenarios import load_scenario, load_scenarios, save_scenario
+from cka_game.core.scenarios import (
+    SCENARIO_ID_RE,
+    load_scenario,
+    load_scenarios,
+    save_scenario,
+)
 from cka_game.core.scoring import compute_score
 from cka_game.core.verify import run_verify
 
@@ -142,6 +147,12 @@ def import_scenario(path: str):
         console.print(f"[red]No such file: {path}[/red]")
         raise typer.Exit(code=1)
     scenario_id = md_path.stem
+    if not SCENARIO_ID_RE.fullmatch(scenario_id):
+        console.print(
+            f"[red]Invalid scenario id '{scenario_id}': must be lowercase letters, "
+            "digits, and hyphens, starting with a letter or digit.[/red]"
+        )
+        raise typer.Exit(code=1)
     try:
         scenario = parse_markdown_scenario(md_path.read_text(), scenario_id)
     except MarkdownScenarioError as exc:
