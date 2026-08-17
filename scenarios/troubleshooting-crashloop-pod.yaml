@@ -1,9 +1,10 @@
 title: Fix a CrashLooping container
 description: >
-  In namespace "scenario-troubleshooting-crashloop", create a Pod named "crashy"
-  running busybox with a command that exits immediately (e.g. `false`), causing
-  it to CrashLoopBackOff. Then diagnose it with kubectl logs/describe and fix the
-  command so the Pod reaches a stable Running state.
+  In namespace "scenario-troubleshooting-crashloop", a Pod named "crashy" is
+  already stuck in CrashLoopBackOff — its command exits immediately. Diagnose
+  it with kubectl logs/describe and fix it so it reaches a stable Running
+  state. Run `cka-game start troubleshooting-crashloop-pod` first to create
+  the broken pod.
 category: troubleshooting
 difficulty: medium
 points: 15
@@ -12,8 +13,21 @@ hints:
   - "kubectl describe pod crashy -n scenario-troubleshooting-crashloop — check the Last State and exit code."
   - "kubectl logs crashy -n scenario-troubleshooting-crashloop --previous"
   - "Replace the Pod's command with something that keeps the container alive, e.g. sleep 3600, then reapply."
-answer: |
+setup: |
   kubectl create namespace scenario-troubleshooting-crashloop
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-crashloop -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: crashy
+  spec:
+    containers:
+      - name: crashy
+        image: busybox
+        command: ["sh", "-c", "exit 1"]
+  EOF
+answer: |
+  kubectl delete pod crashy -n scenario-troubleshooting-crashloop --ignore-not-found
   cat <<'EOF' | kubectl apply -n scenario-troubleshooting-crashloop -f -
   apiVersion: v1
   kind: Pod

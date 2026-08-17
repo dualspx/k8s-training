@@ -30,3 +30,10 @@ def test_seed_scenarios_cover_expected_categories():
         "cluster",
         "troubleshooting",
     }
+
+
+def test_troubleshooting_scenario_has_a_real_setup_step():
+    scenarios = load_scenarios(SCENARIOS_DIR)
+    scenario = next(s for s in scenarios if s.id == "troubleshooting-crashloop-pod")
+    assert scenario.setup.strip() != ""
+    assert "crashy" in scenario.setup
