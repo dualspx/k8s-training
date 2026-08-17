@@ -26,12 +26,12 @@ nodes:
 {% if is_registered %}
 <p>You're registered as <strong>{{ player_name }}</strong>. Your sandbox namespace:
   <code>{{ namespace }}</code></p>
-{% else %}
-<form method="post" action="/getting-started/register">
-  <label>Your name<br><input type="text" name="name" required></label>
-  <button type="submit">Register</button>
-</form>
 {% endif %}
+<form method="post" action="/getting-started/register">
+  <label>{{ "Change your name (also re-creates your sandbox namespace if it's missing)" if is_registered else "Your name" }}<br>
+    <input type="text" name="name" value="{{ player_name if is_registered else '' }}" required></label>
+  <button type="submit">{{ "Update" if is_registered else "Register" }}</button>
+</form>
 
 <h2>4. Start the game</h2>
 <pre><code>.venv/bin/cka-game serve</code></pre>

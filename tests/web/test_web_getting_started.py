@@ -32,6 +32,22 @@ def test_getting_started_shows_registered_state(tmp_path, monkeypatch):
     assert "You're registered" in response.text
     assert "Samad" in response.text
     assert "player-samad" in response.text
+    # The registration form must still be present (and pre-filled) so an
+    # already-registered player can retry/recreate their sandbox namespace.
+    assert 'name="name"' in response.text
+    assert 'value="Samad"' in response.text
+
+
+def test_getting_started_offers_retry_for_cli_only_registration(tmp_path, monkeypatch):
+    # Simulate a player who registered via `cka-game whoami --set "Name"` on
+    # the CLI, which only writes player.json and never touches the cluster.
+    # The web page must still offer a way to create the sandbox namespace.
+    client = _client(tmp_path, monkeypatch)
+    identity.set_player_name("Samad")
+    response = client.get("/getting-started")
+    assert response.status_code == 200
+    assert "You're registered" in response.text
+    assert 'name="name"' in response.text
 
 
 def test_register_sets_player_name_and_creates_namespace(tmp_path, monkeypatch):
