@@ -50,6 +50,12 @@ verify:
     name: crashy
     field: status.phase
     value: Running
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-crashloop
+    name: crashy
+    field: status.containerStatuses.0.ready
+    value: true
 reset:
   - kind: Namespace
     name: scenario-troubleshooting-crashloop

@@ -67,6 +67,11 @@ def test_seed_scenario_answer_satisfies_its_own_verify(scenario, cluster_client)
             subprocess.run(["bash", "-c", scenario.setup], check=True, capture_output=True, text=True)
             if scenario.id == "troubleshooting-crashloop-pod":
                 _assert_pod_is_crash_looping(cluster_client)
+                pre_fix_results = run_verify(scenario, cluster_client)
+                assert any(not r.passed for r in pre_fix_results), (
+                    "troubleshooting-crashloop-pod's verify checks all passed on the "
+                    "broken pre-fix state -- they don't actually distinguish broken from fixed"
+                )
         subprocess.run(["bash", "-c", scenario.answer], check=True, capture_output=True, text=True)
         failures = []
         for attempt in range(VERIFY_RETRY_ATTEMPTS):
