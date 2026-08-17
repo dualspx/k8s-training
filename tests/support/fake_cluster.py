@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+from kubernetes.dynamic.exceptions import ConflictError
+
+
+class _FakeConflictResponse:
+    status = 409
+    reason = "Conflict"
+    body = ""
+    headers = {}
+
 
 class FakeClusterClient:
     """In-memory stand-in for core.kube's real Kubernetes-backed client."""
@@ -46,6 +55,16 @@ class FakeClusterClient:
                 del self._objects[i]
                 return True
         return False
+
+    def create(self, kind: str, namespace: str | None, body: dict) -> dict:
+        meta = dict(body.get("metadata", {}))
+        name = meta.get("name")
+        if self.get(kind, namespace, name) is not None:
+            raise ConflictError(_FakeConflictResponse())
+        meta["namespace"] = namespace
+        obj = {**body, "kind": kind, "metadata": meta}
+        self._objects.append(obj)
+        return obj
 
 
 def _parse_selector(selector: str | None) -> dict[str, str]:

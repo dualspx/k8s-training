@@ -110,6 +110,12 @@ class DynamicClusterClient:
             return False
         return True
 
+    def create(self, kind: str, namespace: str | None, body: dict) -> dict:
+        resource = self._resource(kind)
+        ns = None if kind in CLUSTER_SCOPED_KINDS else namespace
+        obj = resource.create(body=body, namespace=ns)
+        return obj.to_dict()
+
 
 def build_cluster_client(explicit_context: str | None = None) -> DynamicClusterClient:
     context = resolve_context(explicit_context)
