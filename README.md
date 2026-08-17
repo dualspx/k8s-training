@@ -9,7 +9,14 @@ against the cluster in your terminal, then drive the game with the CLI.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[test]"
+source .venv/bin/activate
 ```
+
+Activate the virtualenv (as above) in every terminal you use for this project, and
+the rest of this README's commands work as plain `cka-game ...` / `python ...` —
+no `.venv/bin/` prefix needed. If you'd rather not activate per-terminal, either
+prefix every command with `.venv/bin/` yourself, or run `pipx install -e .` once for
+a permanent global `cka-game` command that needs no activation at all.
 
 This project assumes the `kind-cka-practice` cluster from this session already
 exists (`kind get clusters` should list it). If it doesn't, create a
@@ -51,23 +58,24 @@ freely) — everything below is also covered there.
 ## Playing (junior mode)
 
 ```bash
-.venv/bin/cka-game whoami                     # see who you're playing as
-.venv/bin/cka-game whoami --set "Your Name"   # override the auto-detected OS username
-.venv/bin/cka-game start <scenario-id>        # apply the scenario's setup step (if any), mark it in progress
-.venv/bin/cka-game list                 # see all scenarios and your status
-.venv/bin/cka-game show <scenario-id>   # read the description + hints so far
-.venv/bin/cka-game hint <scenario-id>   # reveal the next hint (costs points)
+cka-game whoami                     # see who you're playing as
+cka-game whoami --set "Your Name"   # override the auto-detected OS username
+cka-game start <scenario-id>        # apply the scenario's setup step (if any), mark it in progress
+cka-game list                 # see all scenarios and your status
+cka-game show <scenario-id>   # read the description + hints so far
+cka-game hint <scenario-id>   # reveal the next hint (costs points)
 # ... do the actual kubectl work in your terminal ...
-.venv/bin/cka-game check <scenario-id>  # verify your work against the cluster
-.venv/bin/cka-game reveal <scenario-id> # give up and see the answer (zeroes score)
-.venv/bin/cka-game reset <scenario-id>  # clean up and try again
-.venv/bin/cka-game score                # total score across all scenarios
+cka-game check <scenario-id>  # verify your work against the cluster
+cka-game reveal <scenario-id> # give up and see the answer (zeroes score)
+cka-game reset <scenario-id>  # clean up and try again
+cka-game score                # total score across all scenarios
 ```
 
-In another terminal, run `.venv/bin/cka-game serve` and open `http://localhost:8000`
-to watch the scenario board update live as you play. `serve` accepts
-`--host` and `--port` if you need to bind somewhere other than the default
-`127.0.0.1:8000` (e.g. `.venv/bin/cka-game serve --host 0.0.0.0 --port 9000`).
+In another terminal (activate the venv there too, or use `.venv/bin/cka-game`
+directly), run `cka-game serve` and open `http://localhost:8000` to watch the
+scenario board update live as you play. `serve` accepts `--host` and `--port` if
+you need to bind somewhere other than the default `127.0.0.1:8000`
+(e.g. `cka-game serve --host 0.0.0.0 --port 9000`).
 
 ## Authoring (senior mode)
 
@@ -79,7 +87,7 @@ directly — the app picks up changes on the next request, no restart needed.
 Alternatively, write a scenario as a Markdown file and import it:
 
 ```bash
-.venv/bin/cka-game import-scenario my-scenario.md
+cka-game import-scenario my-scenario.md
 ```
 
 The file must start with a `# Title` heading, then `key: value` metadata lines
@@ -104,9 +112,10 @@ target a real cluster by accident.
 ## Running the tests
 
 ```bash
-.venv/bin/python -m pytest -m "not integration"   # fast suite, no cluster required
-.venv/bin/python -m pytest -m integration          # also exercises the real kind-cka-practice cluster
+python -m pytest -m "not integration"   # fast suite, no cluster required
+python -m pytest -m integration          # also exercises the real kind-cka-practice cluster
 ```
 
-Plain `.venv/bin/python -m pytest` (no marker) runs only the fast suite by
-default — the integration marker must be requested explicitly.
+Plain `python -m pytest` (no marker) runs only the fast suite by default — the
+integration marker must be requested explicitly. (Not activated? Use
+`.venv/bin/python -m pytest ...` instead.)
