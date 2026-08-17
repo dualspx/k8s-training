@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import getpass
 import json
+import re
 
 from cka_game.core.paths import PROGRESS_PATH
 
@@ -25,3 +26,14 @@ def set_player_name(name: str) -> None:
     player_path = _player_path()
     player_path.parent.mkdir(parents=True, exist_ok=True)
     player_path.write_text(json.dumps({"name": name}))
+
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def player_namespace(name: str) -> str:
+    """Derive a valid Kubernetes namespace name from a free-text player name."""
+    slug = _SLUG_RE.sub("-", name.lower()).strip("-")
+    if not slug:
+        slug = "player"
+    return f"player-{slug}"[:63].rstrip("-")
