@@ -85,7 +85,10 @@ pre-create broken state), `## Answer` (a single fenced code block), `## Verify`
 (a single fenced `yaml` block — a list of check dicts), and an optional
 `## Reset` (same format as Verify). See `scenarios/troubleshooting-crashloop-pod.yaml`
 for what the resulting scenario looks like, or any existing scenario for the
-underlying YAML schema.
+underlying YAML schema. Note: unlike editing via the web form (which preserves
+`setup` since there's no UI for it), re-importing a scenario via Markdown
+replaces it entirely — omitting `## Setup` on a re-import will clear a
+previously-set setup step.
 
 ## Safety
 
