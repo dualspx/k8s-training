@@ -472,6 +472,43 @@ reset:
     assert {"kind": "Namespace", "name": "scenario-storage-pvpvc"} in scenario.reset
 
 
+def test_editing_scenario_preserves_setup_field(tmp_path, monkeypatch):
+    client, scenarios_dir = _client(tmp_path, monkeypatch)
+    (scenarios_dir / "web-scale.yaml").write_text(
+        SCENARIO_YAML.rstrip() + '\nsetup: "kubectl create namespace scenario-web-scale"\n'
+    )
+    response = client.post(
+        "/author/scenario",
+        data={
+            "id": "web-scale",
+            "title": "Scale a Deployment",
+            "description": "Scale web to 5 replicas.",
+            "category": "workloads",
+            "difficulty": "easy",
+            "points": "10",
+            "hint_penalty": "2",
+            "hints": "",
+            "answer": "kubectl scale deployment web --replicas=5",
+            "reset_namespace": "",
+            "check_type": [],
+            "check_kind": [],
+            "check_namespace": [],
+            "check_name": [],
+            "check_selector": [],
+            "check_field": [],
+            "check_value": [],
+            "check_count": [],
+            "check_container": [],
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    from cka_game.core.scenarios import load_scenario
+
+    scenario = load_scenario(scenarios_dir, "web-scale")
+    assert scenario.setup == "kubectl create namespace scenario-web-scale"
+
+
 def test_edit_scenario_via_form_clears_extra_reset_steps_when_checkbox_checked(
     tmp_path, monkeypatch
 ):

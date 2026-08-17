@@ -121,3 +121,14 @@ def test_scenario_state_api_includes_total_score(tmp_path, monkeypatch):
     ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=8))
     response = client.get("/api/scenario/web-scale/state")
     assert response.json()["total_score"] == 8
+
+
+def test_scenario_detail_shows_needs_setup_note_when_not_started(tmp_path, monkeypatch):
+    client, _ = _client(tmp_path, monkeypatch)
+    scenarios_dir = tmp_path / "scenarios"
+    (scenarios_dir / "web-scale.yaml").write_text(
+        SCENARIO_YAML.rstrip() + '\nsetup: "kubectl create namespace scenario-web-scale"\n'
+    )
+    response = client.get("/scenario/web-scale")
+    assert "needs setup" in response.text.lower()
+    assert "cka-game start web-scale" in response.text

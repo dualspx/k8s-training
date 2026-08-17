@@ -6,6 +6,9 @@
 <p>Status: <span id="status">{{ entry.status }}</span></p>
 <p>Score: <span id="score">{{ entry.score }}</span></p>
 <p>Potential: <span id="potential-score">{{ potential_score }}</span></p>
+{% if needs_setup %}
+<p class="needs-setup">This scenario needs setup — run <code>cka-game start {{ scenario.id }}</code> first.</p>
+{% endif %}
 <h2>Hints revealed so far</h2>
 <ul id="hints">
   {% for hint in revealed_hints %}
