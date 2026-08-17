@@ -48,6 +48,7 @@ safety guard below).
 ```bash
 .venv/bin/cka-game whoami                     # see who you're playing as
 .venv/bin/cka-game whoami --set "Your Name"   # override the auto-detected OS username
+.venv/bin/cka-game start <scenario-id>        # apply the scenario's setup step (if any), mark it in progress
 .venv/bin/cka-game list                 # see all scenarios and your status
 .venv/bin/cka-game show <scenario-id>   # read the description + hints so far
 .venv/bin/cka-game hint <scenario-id>   # reveal the next hint (costs points)
@@ -69,6 +70,22 @@ Click "Switch to Senior" in the web nav, then "Author" to create or edit
 scenarios via a form. For anything the form doesn't cover (exotic verify
 checks, multi-resource resets), hand-edit the YAML files in `scenarios/`
 directly — the app picks up changes on the next request, no restart needed.
+
+Alternatively, write a scenario as a Markdown file and import it:
+
+```bash
+.venv/bin/cka-game import-scenario my-scenario.md
+```
+
+The file must start with a `# Title` heading, then `key: value` metadata lines
+(`category`, `difficulty`, `points`, `hint_penalty`), then `## Description`,
+`## Hints` (a `- ` bullet list), an optional `## Setup` (a single fenced code
+block — real cluster commands that run *before* the junior starts, e.g. to
+pre-create broken state), `## Answer` (a single fenced code block), `## Verify`
+(a single fenced `yaml` block — a list of check dicts), and an optional
+`## Reset` (same format as Verify). See `scenarios/troubleshooting-crashloop-pod.yaml`
+for what the resulting scenario looks like, or any existing scenario for the
+underlying YAML schema.
 
 ## Safety
 
