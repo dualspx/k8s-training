@@ -14,6 +14,7 @@ from cka_game.core.identity import get_player_name
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.scenarios import (
+    SCENARIO_ID_RE,
     Scenario,
     delete_scenario,
     load_scenario,
@@ -32,7 +33,6 @@ BASE_DIR = Path(__file__).resolve().parent
 # only ever intend as literal strings.
 _INT_RE = re.compile(r"-?(0|[1-9]\d*)")
 _FLOAT_RE = re.compile(r"-?(0|[1-9]\d*)\.\d+")
-_SCENARIO_ID_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 
 def _safe_referer(referer: str, request: Request) -> str:
@@ -118,7 +118,7 @@ def create_app() -> FastAPI:
                 "entry": entry,
                 "revealed_hints": revealed_hints,
                 "potential_score": potential_score,
-                "needs_setup": bool(scenario.setup) and entry.status == "not_started",
+                "needs_setup": bool(scenario.setup) and entry.status != "completed",
                 "mode": _mode(request),
                 "total_score": _total_score(),
                 "player_name": get_player_name(),
@@ -251,7 +251,7 @@ def create_app() -> FastAPI:
         reset_namespace = form.get("reset_namespace", "")
         scenario_id = form.get("id", "").strip()
 
-        if not _SCENARIO_ID_RE.fullmatch(scenario_id):
+        if not SCENARIO_ID_RE.fullmatch(scenario_id):
             return PlainTextResponse(
                 "Invalid scenario id: must be lowercase letters, digits, and "
                 "hyphens, starting with a letter or digit.",
@@ -290,7 +290,7 @@ def create_app() -> FastAPI:
 
     @app.post("/author/scenario/{scenario_id}/delete")
     def author_delete(scenario_id: str):
-        if not _SCENARIO_ID_RE.fullmatch(scenario_id):
+        if not SCENARIO_ID_RE.fullmatch(scenario_id):
             return PlainTextResponse(
                 "Invalid scenario id: must be lowercase letters, digits, and "
                 "hyphens, starting with a letter or digit.",

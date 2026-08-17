@@ -132,3 +132,26 @@ def test_scenario_detail_shows_needs_setup_note_when_not_started(tmp_path, monke
     response = client.get("/scenario/web-scale")
     assert "needs setup" in response.text.lower()
     assert "cka-game start web-scale" in response.text
+
+
+def test_scenario_detail_shows_needs_setup_note_when_in_progress(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    scenarios_dir = tmp_path / "scenarios"
+    (scenarios_dir / "web-scale.yaml").write_text(
+        SCENARIO_YAML.rstrip() + '\nsetup: "kubectl create namespace scenario-web-scale"\n'
+    )
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="in_progress"))
+    response = client.get("/scenario/web-scale")
+    assert "needs setup" in response.text.lower()
+    assert "cka-game start web-scale" in response.text
+
+
+def test_scenario_detail_hides_needs_setup_note_when_completed(tmp_path, monkeypatch):
+    client, progress_path = _client(tmp_path, monkeypatch)
+    scenarios_dir = tmp_path / "scenarios"
+    (scenarios_dir / "web-scale.yaml").write_text(
+        SCENARIO_YAML.rstrip() + '\nsetup: "kubectl create namespace scenario-web-scale"\n'
+    )
+    ProgressStore(progress_path).save("web-scale", ProgressEntry(status="completed", score=10))
+    response = client.get("/scenario/web-scale")
+    assert "needs setup" not in response.text.lower()
