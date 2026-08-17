@@ -46,3 +46,25 @@ def test_assert_ambient_context_is_safe_raises_on_mismatch(monkeypatch):
     )
     with pytest.raises(kube.KindSafetyError):
         kube.assert_ambient_context_is_safe()
+
+
+def test_assert_ambient_context_is_safe_wraps_missing_kubectl(monkeypatch):
+    monkeypatch.setenv("CKA_GAME_KUBE_CONTEXT", "kind-cka-practice")
+
+    def _raise(*a, **k):
+        raise FileNotFoundError("kubectl not found")
+
+    monkeypatch.setattr(kube.subprocess, "run", _raise)
+    with pytest.raises(kube.KindSafetyError):
+        kube.assert_ambient_context_is_safe()
+
+
+def test_assert_ambient_context_is_safe_wraps_no_current_context(monkeypatch):
+    monkeypatch.setenv("CKA_GAME_KUBE_CONTEXT", "kind-cka-practice")
+
+    def _raise(*a, **k):
+        raise kube.subprocess.CalledProcessError(1, ["kubectl", "config", "current-context"])
+
+    monkeypatch.setattr(kube.subprocess, "run", _raise)
+    with pytest.raises(kube.KindSafetyError):
+        kube.assert_ambient_context_is_safe()

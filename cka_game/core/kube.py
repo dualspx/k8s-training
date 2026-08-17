@@ -51,9 +51,15 @@ def assert_ambient_context_is_safe() -> None:
     invocation (as opposed to calls through DynamicClusterClient, which is
     already guarded via resolve_context())."""
     safe_context = resolve_context()
-    ambient = subprocess.run(
-        ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
-    ).stdout.strip()
+    try:
+        ambient = subprocess.run(
+            ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise KindSafetyError(
+            f"Could not determine the ambient kubectl context ({exc}). Is kubectl installed "
+            "and is a context configured?"
+        ) from exc
     if ambient != safe_context:
         raise KindSafetyError(
             f"Ambient kubectl context is '{ambient}' but the safety-guarded context is "
