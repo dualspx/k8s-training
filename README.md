@@ -34,6 +34,66 @@ export CKA_GAME_KUBE_CONTEXT=<your-practice-context>
 kubectl config use-context "$CKA_GAME_KUBE_CONTEXT"
 ```
 
+### Don't have a cluster? Set up your own with kind
+
+[kind](https://kind.sigs.k8s.io/) runs a throwaway Kubernetes cluster in Docker, entirely
+inside your own account — its context goes into *your* `~/.kube/config`, so other users
+on the same machine never see or affect it. Everything below is per user, no root needed
+except possibly Docker access.
+
+**Prerequisites:** `docker ps` and `kubectl version --client` must both work. On a shared
+Linux host an admin may need to run `sudo usermod -aG docker <you>` (then log out and in).
+Note that docker-group membership is effectively root on that host.
+
+**1. Install kind**
+
+```bash
+# Pick the latest release from https://github.com/kubernetes-sigs/kind/releases
+# (v0.24.0 is just an example)
+mkdir -p ~/.local/bin
+curl -Lo ~/.local/bin/kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
+chmod +x ~/.local/bin/kind
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # or ~/.zshrc
+source ~/.bashrc
+kind version
+```
+
+On macOS use `brew install kind` instead.
+
+**2. Create a multi-node cluster**
+
+Save as `kind-config.yaml` (any location) and create it:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: cka-practice
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+```
+
+```bash
+kind create cluster --config kind-config.yaml
+kubectl config get-contexts     # should list kind-cka-practice
+kubectl get nodes               # 3 nodes, all Ready
+```
+
+**3. Point the game at it**
+
+```bash
+export CKA_GAME_KUBE_CONTEXT=kind-cka-practice
+kubectl config use-context "$CKA_GAME_KUBE_CONTEXT"
+```
+
+Three nodes need roughly 1-2 GB of RAM per user. When several users share one machine,
+each should pick a different `cka-game serve --port` (e.g. 8000, 8001, ...), or the second
+`serve` fails with "address already in use". To remove the cluster later:
+`kind delete cluster --name cka-practice`.
+
+### Project root and env vars
+
 Commands must be run from the project root, since `scenarios/` and
 `data/progress.json` are resolved relative to the current working
 directory by default. Override this with the `CKA_GAME_ROOT` env var (the
