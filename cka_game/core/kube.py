@@ -32,21 +32,29 @@ KIND_API_VERSIONS = {
 CLUSTER_SCOPED_KINDS = {"Namespace", "Node", "ClusterRole", "ClusterRoleBinding", "PersistentVolume"}
 
 
-class KindSafetyError(Exception):
+class ClusterSafetyError(Exception):
     pass
 
 
 def resolve_context(explicit: str | None = None) -> str:
-    context = explicit or os.environ.get("CKA_GAME_KUBE_CONTEXT", "kind-cka-practice")
-    if not context.startswith("kind-"):
-        raise KindSafetyError(
-            f"Refusing to target context '{context}': only 'kind-*' contexts are allowed."
+    """Return the one kubectl context the game may target.
+
+    There is deliberately no default and no fallback to the ambient context:
+    the context must be named explicitly (CKA_GAME_KUBE_CONTEXT or `explicit`),
+    so the game can never run against whatever cluster happens to be current.
+    """
+    context = explicit or os.environ.get("CKA_GAME_KUBE_CONTEXT")
+    if not context:
+        raise ClusterSafetyError(
+            "No target context set. Choose the practice cluster explicitly: "
+            "export CKA_GAME_KUBE_CONTEXT=<your-practice-context> "
+            "(see `kubectl config get-contexts`)."
         )
     return context
 
 
 def assert_ambient_context_is_safe() -> None:
-    """Raise KindSafetyError if the ambient `kubectl` context doesn't match
+    """Raise ClusterSafetyError if the ambient `kubectl` context doesn't match
     the guarded context. Call this before any subprocess-based kubectl
     invocation (as opposed to calls through DynamicClusterClient, which is
     already guarded via resolve_context())."""
@@ -56,12 +64,12 @@ def assert_ambient_context_is_safe() -> None:
             ["kubectl", "config", "current-context"], capture_output=True, text=True, check=True
         ).stdout.strip()
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-        raise KindSafetyError(
+        raise ClusterSafetyError(
             f"Could not determine the ambient kubectl context ({exc}). Is kubectl installed "
             "and is a context configured?"
         ) from exc
     if ambient != safe_context:
-        raise KindSafetyError(
+        raise ClusterSafetyError(
             f"Ambient kubectl context is '{ambient}' but the safety-guarded context is "
             f"'{safe_context}'. Run 'kubectl config use-context {safe_context}' first."
         )

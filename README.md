@@ -1,6 +1,6 @@
 # CKA Scenario Game
 
-A CLI + web app for practicing Kubernetes/CKA skills against a local `kind` cluster.
+A CLI + web app for practicing Kubernetes/CKA skills against a Kubernetes cluster using plain `kubectl`.
 The web board shows scenario descriptions, tips, and score; you do the actual work
 against the cluster in your terminal, then drive the game with the CLI.
 
@@ -18,27 +18,20 @@ no `.venv/bin/` prefix needed. If you'd rather not activate per-terminal, either
 prefix every command with `.venv/bin/` yourself, or run `pipx install -e .` once for
 a permanent global `cka-game` command that needs no activation at all.
 
-This project assumes the `kind-cka-practice` cluster from this session already
-exists (`kind get clusters` should list it). If it doesn't, create a
-**multi-node** cluster — some scenarios (e.g. node affinity, cordoning a
-node) require a `cka-practice-worker` and a `cka-practice-worker2`, so a
-single-node cluster can't solve every scenario. Save this as
-`kind-config.yaml`:
+You need a Kubernetes cluster you can safely break, and `kubectl` configured with a
+context for it. Any cluster works (a lab cluster, minikube, k3d, a spare VM
+cluster...) as long as it is disposable: scenario setup and reset steps create and
+delete real resources. Use a **multi-node** cluster (one control-plane plus at least
+two workers) — some scenarios (e.g. node affinity, cordoning a node) need more than
+one worker.
 
-```yaml
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: cka-practice
-nodes:
-  - role: control-plane
-  - role: worker
-  - role: worker
-```
-
-Then create the cluster:
+Tell the game which context to use. There is no default, and it never falls back to
+whatever `kubectl` context is current:
 
 ```bash
-kind create cluster --config kind-config.yaml
+kubectl config get-contexts                      # find your practice context
+export CKA_GAME_KUBE_CONTEXT=<your-practice-context>
+kubectl config use-context "$CKA_GAME_KUBE_CONTEXT"
 ```
 
 Commands must be run from the project root, since `scenarios/` and
@@ -46,9 +39,8 @@ Commands must be run from the project root, since `scenarios/` and
 directory by default. Override this with the `CKA_GAME_ROOT` env var (the
 CLI and web app will then look for `$CKA_GAME_ROOT/scenarios` and
 `$CKA_GAME_ROOT/data/progress.json`). Similarly, the target Kubernetes
-context defaults to `kind-cka-practice` but can be overridden with the
-`CKA_GAME_KUBE_CONTEXT` env var (still must start with `kind-`, per the
-safety guard below).
+context is read from the `CKA_GAME_KUBE_CONTEXT` env var (required, see above, and
+enforced by the safety guard below).
 
 Once `cka-game serve` is running, open `http://localhost:8000/getting-started` for an
 in-browser walkthrough of all of the above, plus registering as a player (which also
@@ -105,15 +97,18 @@ previously-set setup step.
 
 ## Safety
 
-The app refuses to run any cluster-touching command against a context that
-doesn't start with `kind-` (see `cka_game/core/kube.py`). It will never
-target a real cluster by accident.
+The app only ever targets the single context named in `CKA_GAME_KUBE_CONTEXT`.
+It refuses to run any cluster-touching command if that variable is unset, and,
+before running a scenario's `setup` script with raw `kubectl`, it checks that your
+current `kubectl` context is that same one (see `cka_game/core/kube.py`). Point it
+only at a disposable cluster — never at one with real workloads.
 
 ## Running the tests
 
 ```bash
 python -m pytest -m "not integration"   # fast suite, no cluster required
-python -m pytest -m integration          # also exercises the real kind-cka-practice cluster
+python -m pytest -m integration          # also exercises your practice cluster (needs CKA_GAME_KUBE_CONTEXT set and
+                                         # your current kubectl context to match it)
 ```
 
 Plain `python -m pytest` (no marker) runs only the fast suite by default — the

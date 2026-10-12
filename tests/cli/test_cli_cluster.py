@@ -1,7 +1,7 @@
 from typer.testing import CliRunner
 
 import cka_game.cli.main as cli_main
-from cka_game.core.kube import KindSafetyError
+from cka_game.core.kube import ClusterSafetyError
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from tests.support.fake_cluster import FakeClusterClient
 
@@ -84,7 +84,7 @@ def test_check_reports_kind_safety_error(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
 
     def _raise():
-        raise KindSafetyError("Refusing to target context 'samad@uoa'")
+        raise ClusterSafetyError("Refusing to target context 'samad@uoa'")
 
     monkeypatch.setattr(cli_main, "build_cluster_client", _raise)
     result = runner.invoke(cli_main.app, ["check", "web-scale"])

@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 import cka_game.core.identity as identity
 import cka_game.web.app as web_app
-from cka_game.core.kube import KindSafetyError
+from cka_game.core.kube import ClusterSafetyError
 from tests.support.fake_cluster import FakeClusterClient
 
 
@@ -84,7 +84,7 @@ def test_register_reports_kind_safety_error_but_still_saves_name(tmp_path, monke
     client = _client(tmp_path, monkeypatch)
 
     def _raise():
-        raise KindSafetyError("Refusing to target context 'samad@uoa'")
+        raise ClusterSafetyError("Refusing to target context 'samad@uoa'")
 
     monkeypatch.setattr(web_app, "build_cluster_client", _raise)
 

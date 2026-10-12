@@ -17,7 +17,7 @@ from cka_game.core.identity import (
     player_namespace,
     set_player_name,
 )
-from cka_game.core.kube import KindSafetyError, build_cluster_client
+from cka_game.core.kube import ClusterSafetyError, build_cluster_client
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.scenarios import (
@@ -202,7 +202,7 @@ def create_app() -> FastAPI:
             )
         except ConflictError:
             pass  # namespace already exists -- idempotent re-registration
-        except KindSafetyError as exc:
+        except ClusterSafetyError as exc:
             return templates.TemplateResponse(
                 request,
                 "getting_started.html",

@@ -9,7 +9,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from cka_game.core.identity import get_player_name, is_player_name_set, set_player_name
-from cka_game.core.kube import KindSafetyError, assert_ambient_context_is_safe, build_cluster_client
+from cka_game.core.kube import ClusterSafetyError, assert_ambient_context_is_safe, build_cluster_client
 from cka_game.core.markdown_scenario import MarkdownScenarioError, parse_markdown_scenario
 from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
 from cka_game.core.progress import ProgressEntry, ProgressStore
@@ -168,7 +168,7 @@ def start(scenario_id: str):
     if scenario.setup:
         try:
             assert_ambient_context_is_safe()
-        except KindSafetyError as exc:
+        except ClusterSafetyError as exc:
             console.print(f"[red]{exc}[/red]")
             raise typer.Exit(code=1)
         try:
@@ -193,13 +193,13 @@ def start(scenario_id: str):
 def _cluster_client_or_exit():
     try:
         return build_cluster_client()
-    except KindSafetyError as exc:
+    except ClusterSafetyError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1)
     except Exception:
         console.print(
-            "[red]Cluster unreachable, is 'kind-cka-practice' running? "
-            "(try: kind get clusters)[/red]"
+            "[red]Cluster unreachable. Is your CKA_GAME_KUBE_CONTEXT cluster running? "
+            "(try: kubectl --context $CKA_GAME_KUBE_CONTEXT get nodes)[/red]"
         )
         raise typer.Exit(code=1)
 

@@ -1,0 +1,98 @@
+# Deploys the cka-game read-only web board.
+#
+# Usage (pick the target context explicitly; never apply to an unintended cluster):
+#   kubectl --context <your-context> apply -f k8s.yaml
+#   kubectl --context <your-context> -n cka-game port-forward svc/cka-game 8000:80
+#
+# Before applying: build and push an image, then replace the image below.
+# The image must contain the package and the scenarios/ dir, with
+# WORKDIR /app and CMD ["cka-game", "serve", "--host", "0.0.0.0", "--port", "8000"].
+#
+# Scope: only the read-only board. `cka-game start/check/reset` and
+# POST /getting-started/register need CKA_GAME_KUBE_CONTEXT and a kubeconfig, so they do not
+# work inside this pod and are meant to be run from a workstation.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cka-game
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cka-game-data
+  namespace: cka-game
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cka-game
+  namespace: cka-game
+  labels:
+    app: cka-game
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO volume; progress.json is a single-writer file
+  selector:
+    matchLabels:
+      app: cka-game
+  template:
+    metadata:
+      labels:
+        app: cka-game
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: web
+          image: REGISTRY/cka-game:0.1.0 # TODO: replace with your image
+          imagePullPolicy: IfNotPresent
+          args: ["cka-game", "serve", "--host", "0.0.0.0", "--port", "8000"]
+          env:
+            - name: CKA_GAME_ROOT
+              value: /app
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: cka-game-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cka-game
+  namespace: cka-game
+spec:
+  selector:
+    app: cka-game
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

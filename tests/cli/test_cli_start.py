@@ -3,7 +3,7 @@ import subprocess
 from typer.testing import CliRunner
 
 import cka_game.cli.main as cli_main
-from cka_game.core.kube import KindSafetyError
+from cka_game.core.kube import ClusterSafetyError
 from cka_game.core.progress import ProgressStore
 
 runner = CliRunner()
@@ -79,7 +79,7 @@ def test_start_reports_kind_safety_error_without_running_setup(tmp_path, monkeyp
     _setup(tmp_path, monkeypatch, SCENARIO_WITH_SETUP, "with-setup")
 
     def _raise():
-        raise KindSafetyError("Refusing to target context 'samad@uoa'")
+        raise ClusterSafetyError("Refusing to target context 'samad@uoa'")
 
     monkeypatch.setattr(cli_main, "assert_ambient_context_is_safe", _raise)
     calls = []

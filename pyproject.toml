@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cka-game"
 version = "0.1.0"
-description = "CLI + web app for practicing Kubernetes/CKA skills against a kind cluster"
+description = "CLI + web app for practicing Kubernetes/CKA skills against a Kubernetes cluster"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.110",
@@ -28,5 +28,5 @@ test = ["pytest>=8.0", "httpx>=0.27"]
 packages = ["cka_game"]
 
 [tool.pytest.ini_options]
-markers = ["integration: exercises the real kind-cka-practice cluster"]
+markers = ["integration: exercises the real practice cluster (CKA_GAME_KUBE_CONTEXT)"]
 addopts = "-m 'not integration'"

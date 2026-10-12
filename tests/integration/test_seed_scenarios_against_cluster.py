@@ -22,7 +22,7 @@ VERIFY_RETRY_ATTEMPTS = 10
 VERIFY_RETRY_DELAY_SECONDS = 1.0
 
 # These scenarios' `answer` is applied via a raw `bash -c` subprocess call
-# below, which does NOT go through core.kube's kind- safety guard. Extra
+# below, which does NOT go through core.kube's context safety guard. Extra
 # cleanup for scenarios whose `reset` can't fully undo what `answer` did
 # (cordoning a node, labeling a node) — run best-effort in the `finally`
 # block after the generic run_reset() call, so the suite is self-cleaning.
