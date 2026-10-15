@@ -1,0 +1,37 @@
+title: Roll back a bad rollout
+description: >
+  In namespace "scenario-workloads-rollback", Deployment "web" (2 replicas) was
+  just updated to an image tag that doesn't exist, so the new Pods can't start.
+  Roll the Deployment back to its previous working revision (nginx:1.24) so
+  both replicas are ready again. Run `cka-game start workloads-rollback-deployment`
+  first to create the broken rollout.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl rollout history deployment/web -n scenario-workloads-rollback"
+  - "kubectl rollout undo deployment/web -n scenario-workloads-rollback"
+setup: |
+  kubectl create namespace scenario-workloads-rollback
+  kubectl create deployment web --image=nginx:1.24 --replicas=2 -n scenario-workloads-rollback
+  kubectl rollout status deployment/web -n scenario-workloads-rollback --timeout=120s
+  kubectl set image deployment/web nginx=nginx:1.99-does-not-exist -n scenario-workloads-rollback
+answer: |
+  kubectl rollout undo deployment/web -n scenario-workloads-rollback
+  kubectl rollout status deployment/web -n scenario-workloads-rollback --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-workloads-rollback
+    name: web
+    value: nginx:1.24
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-workloads-rollback
+    name: web
+    field: status.readyReplicas
+    value: 2
+reset:
+  - kind: Namespace
+    name: scenario-workloads-rollback

@@ -1,0 +1,58 @@
+title: Fix a Pending Pod
+description: >
+  In namespace "scenario-troubleshooting-pending", Pod "hungry" is stuck in
+  Pending. Work out why and recreate it so it runs, requesting only 100m CPU.
+  Run `cka-game start troubleshooting-pending-pod` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl describe pod hungry -n scenario-troubleshooting-pending — read the FailedScheduling event."
+  - "Resource requests are immutable on a running Pod: delete it and apply a corrected manifest."
+setup: |
+  kubectl create namespace scenario-troubleshooting-pending
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-pending -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: hungry
+  spec:
+    containers:
+      - name: hungry
+        image: nginx:1.25
+        resources:
+          requests:
+            cpu: "1000"
+  EOF
+answer: |
+  kubectl delete pod hungry -n scenario-troubleshooting-pending --ignore-not-found
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-pending -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: hungry
+  spec:
+    containers:
+      - name: hungry
+        image: nginx:1.25
+        resources:
+          requests:
+            cpu: 100m
+  EOF
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-pending
+    name: hungry
+    field: spec.containers.0.resources.requests.cpu
+    value: 100m
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-pending
+    name: hungry
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-pending

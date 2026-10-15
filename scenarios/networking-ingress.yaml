@@ -1,0 +1,42 @@
+title: Route traffic with an Ingress
+description: >
+  In namespace "scenario-networking-ingress", create a Deployment "web"
+  (nginx:1.25), a ClusterIP Service "web" on port 80, and an Ingress named
+  "web-ingress" routing host web.example.com, path /, to that Service on port 80.
+category: networking
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl create ingress web-ingress --rule=\"web.example.com/=web:80\" -n <ns>"
+answer: |
+  kubectl create namespace scenario-networking-ingress
+  kubectl create deployment web --image=nginx:1.25 -n scenario-networking-ingress
+  kubectl expose deployment web --port=80 -n scenario-networking-ingress
+  kubectl create ingress web-ingress --rule="web.example.com/=web:80" -n scenario-networking-ingress
+verify:
+  - type: resource_exists
+    kind: Service
+    namespace: scenario-networking-ingress
+    name: web
+  - type: field_equals
+    kind: Ingress
+    namespace: scenario-networking-ingress
+    name: web-ingress
+    field: spec.rules.0.host
+    value: web.example.com
+  - type: field_equals
+    kind: Ingress
+    namespace: scenario-networking-ingress
+    name: web-ingress
+    field: spec.rules.0.http.paths.0.backend.service.name
+    value: web
+  - type: field_equals
+    kind: Ingress
+    namespace: scenario-networking-ingress
+    name: web-ingress
+    field: spec.rules.0.http.paths.0.backend.service.port.number
+    value: 80
+reset:
+  - kind: Namespace
+    name: scenario-networking-ingress

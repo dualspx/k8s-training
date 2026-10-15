@@ -1,0 +1,45 @@
+title: Service with no endpoints
+description: >
+  In namespace "scenario-troubleshooting-svc", Service "web" fronts Deployment
+  "web" but requests to it go nowhere — the Service has no endpoints. Find out
+  why and fix the Service (do not change the Deployment). Run
+  `cka-game start troubleshooting-service-selector` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl get endpoints web -n scenario-troubleshooting-svc"
+  - "Compare the Service's spec.selector with the Pod labels: kubectl get pods --show-labels"
+setup: |
+  kubectl create namespace scenario-troubleshooting-svc
+  kubectl create deployment web --image=nginx:1.25 -n scenario-troubleshooting-svc
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-svc -f -
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: web
+  spec:
+    selector:
+      app: wbe
+    ports:
+      - port: 80
+  EOF
+answer: |
+  kubectl patch service web -n scenario-troubleshooting-svc \
+    --type=merge -p '{"spec":{"selector":{"app":"web"}}}'
+verify:
+  - type: field_equals
+    kind: Service
+    namespace: scenario-troubleshooting-svc
+    name: web
+    field: spec.selector.app
+    value: web
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-svc
+    name: web
+    value: nginx:1.25
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-svc

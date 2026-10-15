@@ -1,0 +1,34 @@
+title: Fix an ImagePullBackOff
+description: >
+  In namespace "scenario-troubleshooting-image", Deployment "api" (2 replicas)
+  has Pods stuck in ImagePullBackOff because of a wrong image tag. Find the
+  problem and fix the Deployment to use nginx:1.25 so both replicas become
+  ready. Run `cka-game start troubleshooting-bad-image` first.
+category: troubleshooting
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl describe pod -n scenario-troubleshooting-image — look at the Events."
+  - "kubectl set image deployment/api nginx=nginx:1.25 -n scenario-troubleshooting-image"
+setup: |
+  kubectl create namespace scenario-troubleshooting-image
+  kubectl create deployment api --image=nginx:1.99-does-not-exist --replicas=2 -n scenario-troubleshooting-image
+answer: |
+  kubectl set image deployment/api nginx=nginx:1.25 -n scenario-troubleshooting-image
+  kubectl rollout status deployment/api -n scenario-troubleshooting-image --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-image
+    name: api
+    value: nginx:1.25
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-image
+    name: api
+    field: status.readyReplicas
+    value: 2
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-image

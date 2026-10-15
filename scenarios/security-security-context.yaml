@@ -1,0 +1,64 @@
+title: Harden a Pod with a securityContext
+description: >
+  In namespace "scenario-security-context", create a Pod named "locked-down"
+  (image busybox, command `sleep 3600`) that runs as non-root user 1000, has a
+  read-only root filesystem and disallows privilege escalation.
+category: security
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "runAsNonRoot and runAsUser can be set at pod level; readOnlyRootFilesystem and allowPrivilegeEscalation are container-level securityContext fields."
+answer: |
+  kubectl create namespace scenario-security-context
+  cat <<'EOF' | kubectl apply -n scenario-security-context -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: locked-down
+  spec:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    containers:
+      - name: locked-down
+        image: busybox
+        command: ["sleep", "3600"]
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+  EOF
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-security-context
+    name: locked-down
+    field: spec.securityContext.runAsUser
+    value: 1000
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-security-context
+    name: locked-down
+    field: spec.securityContext.runAsNonRoot
+    value: true
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-security-context
+    name: locked-down
+    field: spec.containers.0.securityContext.readOnlyRootFilesystem
+    value: true
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-security-context
+    name: locked-down
+    field: spec.containers.0.securityContext.allowPrivilegeEscalation
+    value: false
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-security-context
+    name: locked-down
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-security-context

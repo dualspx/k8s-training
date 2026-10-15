@@ -1,0 +1,52 @@
+title: Run a parallel Job
+description: >
+  In namespace "scenario-workloads-job", create a Job named "batch" (image
+  busybox, command `echo done`) that runs to 3 completions with at most 2 Pods
+  in parallel. Wait for it to finish.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "`kubectl create job` has no completions flag; generate YAML with --dry-run=client -o yaml and add spec.completions / spec.parallelism."
+answer: |
+  kubectl create namespace scenario-workloads-job
+  cat <<'EOF' | kubectl apply -n scenario-workloads-job -f -
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: batch
+  spec:
+    completions: 3
+    parallelism: 2
+    template:
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: batch
+            image: busybox
+            command: ["sh", "-c", "echo done"]
+  EOF
+  kubectl wait --for=condition=complete job/batch -n scenario-workloads-job --timeout=120s
+verify:
+  - type: field_equals
+    kind: Job
+    namespace: scenario-workloads-job
+    name: batch
+    field: spec.completions
+    value: 3
+  - type: field_equals
+    kind: Job
+    namespace: scenario-workloads-job
+    name: batch
+    field: spec.parallelism
+    value: 2
+  - type: field_equals
+    kind: Job
+    namespace: scenario-workloads-job
+    name: batch
+    field: status.succeeded
+    value: 3
+reset:
+  - kind: Namespace
+    name: scenario-workloads-job

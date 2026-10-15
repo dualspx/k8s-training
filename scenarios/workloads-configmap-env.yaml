@@ -1,0 +1,52 @@
+title: Inject configuration with a ConfigMap
+description: >
+  In namespace "scenario-workloads-configmap", create a ConfigMap named
+  "app-config" with key LOG_LEVEL=debug. Then create a Pod named "app"
+  (image busybox, command `sleep 3600`) that loads every key of that
+  ConfigMap as environment variables using envFrom.
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl create configmap app-config --from-literal=LOG_LEVEL=debug"
+  - "Use envFrom -> configMapRef -> name in the container spec. `kubectl run app --dry-run=client -o yaml` gives a starting manifest."
+answer: |
+  kubectl create namespace scenario-workloads-configmap
+  kubectl create configmap app-config --from-literal=LOG_LEVEL=debug -n scenario-workloads-configmap
+  cat <<'EOF' | kubectl apply -n scenario-workloads-configmap -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: app
+  spec:
+    containers:
+      - name: app
+        image: busybox
+        command: ["sleep", "3600"]
+        envFrom:
+          - configMapRef:
+              name: app-config
+  EOF
+verify:
+  - type: field_equals
+    kind: ConfigMap
+    namespace: scenario-workloads-configmap
+    name: app-config
+    field: data.LOG_LEVEL
+    value: debug
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-configmap
+    name: app
+    field: spec.containers.0.envFrom.0.configMapRef.name
+    value: app-config
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-configmap
+    name: app
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-workloads-configmap

@@ -1,0 +1,73 @@
+title: StatefulSet with a headless Service
+description: >
+  In namespace "scenario-workloads-statefulset", create a headless Service
+  named "db" (clusterIP None, port 80, selector app=db) and a StatefulSet
+  named "db" with 2 replicas of nginx:1.25 labelled app=db, using the Service
+  as its serviceName.
+category: workloads
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "A headless Service sets spec.clusterIP: None."
+  - "StatefulSet needs spec.serviceName matching the headless Service, plus selector and template labels that agree."
+answer: |
+  kubectl create namespace scenario-workloads-statefulset
+  cat <<'EOF' | kubectl apply -n scenario-workloads-statefulset -f -
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: db
+  spec:
+    clusterIP: None
+    selector:
+      app: db
+    ports:
+      - port: 80
+  ---
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: db
+  spec:
+    serviceName: db
+    replicas: 2
+    selector:
+      matchLabels:
+        app: db
+    template:
+      metadata:
+        labels:
+          app: db
+      spec:
+        containers:
+          - name: db
+            image: nginx:1.25
+  EOF
+verify:
+  - type: field_equals
+    kind: Service
+    namespace: scenario-workloads-statefulset
+    name: db
+    field: spec.clusterIP
+    value: None
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-workloads-statefulset
+    name: db
+    field: spec.serviceName
+    value: db
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-workloads-statefulset
+    name: db
+    field: spec.replicas
+    value: 2
+  - type: container_image_equals
+    kind: StatefulSet
+    namespace: scenario-workloads-statefulset
+    name: db
+    value: nginx:1.25
+reset:
+  - kind: Namespace
+    name: scenario-workloads-statefulset

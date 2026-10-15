@@ -1,0 +1,36 @@
+title: Limit a namespace with a ResourceQuota
+description: >
+  Create namespace "scenario-cluster-quota" and a ResourceQuota named
+  "team-quota" in it that caps the namespace at 3 Pods, 2 Services and 5
+  ConfigMaps.
+category: cluster
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl create quota team-quota --hard=pods=3,services=2,configmaps=5 -n <ns>"
+answer: |
+  kubectl create namespace scenario-cluster-quota
+  kubectl create quota team-quota --hard=pods=3,services=2,configmaps=5 -n scenario-cluster-quota
+verify:
+  - type: field_equals
+    kind: ResourceQuota
+    namespace: scenario-cluster-quota
+    name: team-quota
+    field: spec.hard.pods
+    value: "3"
+  - type: field_equals
+    kind: ResourceQuota
+    namespace: scenario-cluster-quota
+    name: team-quota
+    field: spec.hard.services
+    value: "2"
+  - type: field_equals
+    kind: ResourceQuota
+    namespace: scenario-cluster-quota
+    name: team-quota
+    field: spec.hard.configmaps
+    value: "5"
+reset:
+  - kind: Namespace
+    name: scenario-cluster-quota

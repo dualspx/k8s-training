@@ -1,0 +1,58 @@
+title: Set resource requests and limits
+description: >
+  In namespace "scenario-workloads-resources", create a Pod named "limited"
+  (image nginx:1.25) with CPU request 100m, memory request 64Mi, CPU limit
+  200m and memory limit 128Mi.
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl run limited --image=nginx:1.25 --dry-run=client -o yaml, then add a resources: block."
+answer: |
+  kubectl create namespace scenario-workloads-resources
+  cat <<'EOF' | kubectl apply -n scenario-workloads-resources -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: limited
+  spec:
+    containers:
+      - name: limited
+        image: nginx:1.25
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+  EOF
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-resources
+    name: limited
+    field: spec.containers.0.resources.requests.cpu
+    value: 100m
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-resources
+    name: limited
+    field: spec.containers.0.resources.requests.memory
+    value: 64Mi
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-resources
+    name: limited
+    field: spec.containers.0.resources.limits.cpu
+    value: 200m
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-resources
+    name: limited
+    field: spec.containers.0.resources.limits.memory
+    value: 128Mi
+reset:
+  - kind: Namespace
+    name: scenario-workloads-resources

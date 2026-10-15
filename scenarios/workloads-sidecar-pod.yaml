@@ -1,0 +1,64 @@
+title: Multi-container Pod with a shared volume
+description: >
+  In namespace "scenario-workloads-sidecar", create a Pod named "web-logs"
+  with two containers: "web" (nginx:1.25) and "log-sidecar" (busybox, command
+  `sleep 3600`). Both must mount a shared emptyDir volume named "logs" at
+  /var/log/app.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "Define the emptyDir under spec.volumes, then list a volumeMount for it in each container."
+answer: |
+  kubectl create namespace scenario-workloads-sidecar
+  cat <<'EOF' | kubectl apply -n scenario-workloads-sidecar -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: web-logs
+  spec:
+    containers:
+      - name: web
+        image: nginx:1.25
+        volumeMounts:
+          - name: logs
+            mountPath: /var/log/app
+      - name: log-sidecar
+        image: busybox
+        command: ["sleep", "3600"]
+        volumeMounts:
+          - name: logs
+            mountPath: /var/log/app
+    volumes:
+      - name: logs
+        emptyDir: {}
+  EOF
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sidecar
+    name: web-logs
+    field: spec.containers.1.name
+    value: log-sidecar
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sidecar
+    name: web-logs
+    field: spec.containers.0.volumeMounts.0.mountPath
+    value: /var/log/app
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sidecar
+    name: web-logs
+    field: spec.containers.1.volumeMounts.0.mountPath
+    value: /var/log/app
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sidecar
+    name: web-logs
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-workloads-sidecar

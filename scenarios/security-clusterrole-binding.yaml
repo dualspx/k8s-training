@@ -1,0 +1,48 @@
+title: Cluster-wide read access to nodes
+description: >
+  Create a ServiceAccount "monitor" in namespace "scenario-security-cluster",
+  a ClusterRole "node-reader" allowing get/list/watch on nodes, and a
+  ClusterRoleBinding "node-reader-binding" granting that ClusterRole to the
+  ServiceAccount.
+category: security
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl create clusterrole ... --verb=get,list,watch --resource=nodes"
+  - "kubectl create clusterrolebinding ... --clusterrole=... --serviceaccount=<namespace>:<name>"
+  - "Check your work with: kubectl auth can-i list nodes --as=system:serviceaccount:scenario-security-cluster:monitor"
+answer: |
+  kubectl create namespace scenario-security-cluster
+  kubectl create serviceaccount monitor -n scenario-security-cluster
+  kubectl create clusterrole node-reader --verb=get,list,watch --resource=nodes
+  kubectl create clusterrolebinding node-reader-binding \
+    --clusterrole=node-reader \
+    --serviceaccount=scenario-security-cluster:monitor
+verify:
+  - type: resource_exists
+    kind: ServiceAccount
+    namespace: scenario-security-cluster
+    name: monitor
+  - type: field_equals
+    kind: ClusterRole
+    name: node-reader
+    field: rules.0.resources.0
+    value: nodes
+  - type: field_equals
+    kind: ClusterRoleBinding
+    name: node-reader-binding
+    field: roleRef.name
+    value: node-reader
+  - type: field_equals
+    kind: ClusterRoleBinding
+    name: node-reader-binding
+    field: subjects.0.name
+    value: monitor
+reset:
+  - kind: ClusterRoleBinding
+    name: node-reader-binding
+  - kind: ClusterRole
+    name: node-reader
+  - kind: Namespace
+    name: scenario-security-cluster
