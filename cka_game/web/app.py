@@ -18,7 +18,7 @@ from cka_game.core.identity import (
     set_player_name,
 )
 from cka_game.core.kube import ClusterSafetyError, build_cluster_client
-from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR
+from cka_game.core.paths import PROGRESS_PATH, SCENARIOS_DIR, SCOREBOARD_PATH
 from cka_game.core.progress import ProgressEntry, ProgressStore
 from cka_game.core.scenarios import (
     SCENARIO_ID_RE,
@@ -27,6 +27,12 @@ from cka_game.core.scenarios import (
     load_scenario,
     load_scenarios,
     save_scenario,
+)
+from cka_game.core.scoreboard import (
+    ScoreboardError,
+    ScoreboardStore,
+    get_hub_token,
+    token_matches,
 )
 from cka_game.core.scoring import compute_score
 
@@ -66,6 +72,8 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=BASE_DIR / "templates")
     store = ProgressStore(PROGRESS_PATH)
+    scoreboard = ScoreboardStore(SCOREBOARD_PATH)
+    scoreboard_error_status = {"invalid": 422, "unknown_scenario": 404, "name_taken": 409}
 
     def _mode(request: Request) -> str:
         return request.cookies.get("cka_game_mode", "junior")
@@ -174,6 +182,48 @@ def create_app() -> FastAPI:
             if entry.status == "completed":
                 total += entry.score
         return {"scenarios": items, "total_score": total}
+
+    @app.post("/api/scoreboard/submit")
+    async def scoreboard_submit(request: Request):
+        scheme, _, provided = request.headers.get("authorization", "").partition(" ")
+        if scheme.lower() != "bearer" or not token_matches(provided.strip(), get_hub_token()):
+            return JSONResponse({"error": "invalid or missing token"}, status_code=401)
+        try:
+            body = await request.json()
+        except ValueError:
+            return JSONResponse({"error": "body must be JSON"}, status_code=422)
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "body must be a JSON object"}, status_code=422)
+        points = {s.id: s.points for s in load_scenarios(SCENARIOS_DIR)}
+        try:
+            scoreboard.submit(
+                body.get("player"),
+                body.get("player_id"),
+                body.get("scenario_id"),
+                body.get("entry"),
+                points,
+            )
+        except ScoreboardError as exc:
+            return JSONResponse(
+                {"error": exc.message}, status_code=scoreboard_error_status[exc.code]
+            )
+        return {"ok": True}
+
+    @app.get("/api/scoreboard")
+    def scoreboard_state():
+        return {"players": scoreboard.ranking()}
+
+    @app.get("/scoreboard")
+    def scoreboard_page(request: Request):
+        return templates.TemplateResponse(
+            request,
+            "scoreboard.html",
+            {
+                "mode": _mode(request),
+                "total_score": _total_score(),
+                "player_name": get_player_name(),
+            },
+        )
 
     @app.get("/getting-started")
     def getting_started(request: Request):

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Scoreboard</h1>
+<table class="scenario-table" id="scoreboard-table">
+  <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Completed</th><th>Hints</th><th>Last active</th></tr></thead>
+  <tbody id="scoreboard-body"></tbody>
+</table>
+<p id="scoreboard-empty">No scores yet. Set <code>CKA_GAME_SERVER</code> and <code>CKA_GAME_TOKEN</code> on your machine and play a scenario.</p>
+<script>pollScoreboard("/api/scoreboard");</script>
+{% endblock %}
