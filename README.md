@@ -137,6 +137,21 @@ cka-game check <scenario-id>    # verify your work; watch the board update
 Stuck? `cka-game hint <scenario-id>` costs points; `cka-game reset <scenario-id>`
 cleans up so you can retry. The full command list is under "Playing" below.
 
+## Shared scoreboard
+
+Optional: run one hub that collects everyone's scores.
+
+- **Hub (owner, once):** `cp .env.example .env`, set `CKA_GAME_TOKEN`,
+  `docker compose up -d --build`, open the firewall for TCP 8000, then share
+  `http://<this-machine-LAN-IP>:8000` and the token. The hub needs no kubeconfig.
+- **Players:** `export CKA_GAME_SERVER=http://<hub-ip>:8000` and
+  `export CKA_GAME_TOKEN=<token>` (add to your shell profile), pick a unique name
+  with `cka-game whoami --set <name>`, and play as usual. View the board with
+  `cka-game scoreboard` or `http://<hub-ip>:8000/scoreboard`; `cka-game sync`
+  re-sends everything after being offline.
+- **Owner plays too:** same two env vars, with `http://localhost:8000`.
+- Scores are self-reported; the board assumes a trusted group.
+
 ## Playing (junior mode)
 
 ```bash

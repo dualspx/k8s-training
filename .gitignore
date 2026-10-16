@@ -4,3 +4,7 @@ __pycache__/
 data/progress.json
 data/player.json
 *.egg-info/
+hub-data/
+.env
+data/scoreboard.json
+data/hub_token

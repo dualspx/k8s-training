@@ -1,0 +1,11 @@
+services:
+  hub:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      CKA_GAME_TOKEN: ${CKA_GAME_TOKEN:-}
+    volumes:
+      - ./hub-data:/app/data
+      - ./scenarios:/app/scenarios

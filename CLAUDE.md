@@ -48,17 +48,22 @@ Three layers, one Python package, in strict dependency order:
   `container_image_equals` — deliberately NOT a general expression language),
   `reset.py`, `scoring.py`, `progress.py` (atomic JSON read/write), `identity.py`
   (player name + sandbox-namespace slugification), `kube.py` (the Kubernetes client +
-  safety guard), `markdown_scenario.py` (Markdown → `Scenario` parser), `paths.py`
+  safety guard), `markdown_scenario.py` (Markdown → `Scenario` parser), `scoreboard.py` (hub store/ranking),
+  `scoreboard_client.py` (CLI pushes to the hub), `paths.py`
   (shared `SCENARIOS_DIR`/`PROGRESS_PATH`, overridable via `CKA_GAME_ROOT`).
 - **`cka_game/cli/main.py`** — Typer commands, wraps `core/` directly (no HTTP, same
   process/filesystem). This is where every game *action* lives (hint/check/reveal/
   reset/start).
 - **`cka_game/web/app.py`** — FastAPI, **read-only by design** — it only renders
-  `scenarios/` + `data/progress.json`/`data/player.json` state. The **one exception**
-  is `POST /getting-started/register`, which creates a personal sandbox namespace in
-  the cluster; every other route must stay cluster-free. Don't add cluster access to
+  `scenarios/` + `data/progress.json`/`data/player.json` state. There are **two write
+  routes**: `POST /getting-started/register` (creates a personal sandbox namespace in
+  the cluster) and `POST /api/scoreboard/submit` (writes only `data/scoreboard.json`,
+  cluster-free); every other route must stay cluster-free. Don't add cluster access to
   any other web route without a very deliberate reason — this boundary has been
   reviewed and enforced repeatedly across this project's history.
+- **Shared scoreboard hub:** `cka-game serve` runs under `docker compose` with no
+  kubeconfig. Players' CLIs push scores to it using `CKA_GAME_SERVER` (hub URL) and
+  `CKA_GAME_TOKEN` (shared join token).
 
 **Module-level globals, not constructor injection:** `SCENARIOS_DIR`/`PROGRESS_PATH`
 are imported into each of `cli/main.py`, `web/app.py`, and `core/identity.py`'s own

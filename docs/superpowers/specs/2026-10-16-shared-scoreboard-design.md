@@ -10,7 +10,7 @@ Local progress stays the source of truth, so the game works offline.
 
 - Network: hub reachable on LAN/VPN (no public exposure). Server URL is plain config.
 - Approach: **push on each action**. CLI posts the player's entry after `check`,
-  `hint`, `reveal`; `cka-game sync` re-sends everything.
+  `hint`, `reveal`, `reset`; `cka-game sync` re-sends everything.
 - Trust model: shared join token, trust-the-class. The hub does not recompute
   scores; a determined player could send a fake one. Accepted.
 
@@ -79,18 +79,15 @@ host CLI and competes like any other player.
   (add a `--host` option to `serve` if missing; default stays `127.0.0.1`).
 - `docker-compose.yml`: one service `hub`, `restart: unless-stopped`, port
   `8000:8000`, env `CKA_GAME_TOKEN` from `.env` (git-ignored; `.env.example`
-  committed), volumes `./data:/app/data` (scoreboard + progress survive restarts)
+  committed), volumes `./hub-data:/app/data` (scoreboard + progress survive restarts)
   and `./scenarios:/app/scenarios` (hub validates scenario ids against these, and
   edits made in the author UI persist on the host).
 - The container has **no kubeconfig and no `CKA_GAME_KUBE_CONTEXT`**: it never
-  reaches a cluster. `POST /getting-started/register` (the only cluster-using web
-  route) returns a clear "register from the host CLI" error when the hub has no
-  context configured, instead of a stack trace. Players' CLIs still do all cluster
+  reaches a cluster. `POST /getting-started/register`: the existing handler already converts
+  `ClusterSafetyError` into a friendly message; no change needed. Players' CLIs still do all cluster
   work locally.
 - Owner plays on the host with `CKA_GAME_SERVER=http://localhost:8000` and the same
-  token. Because `./data` is shared, the host's own progress also appears on the
-  hub's per-scenario board; the scoreboard itself is only fed by pushes, so the
-  owner appears the same way as everyone else.
+  token.
 - Other players use `http://<this-machine-LAN-IP>:8000`; README notes the firewall
   port and `docker compose up -d`.
 - Token: if `CKA_GAME_TOKEN` is unset in the container, the generated token is
