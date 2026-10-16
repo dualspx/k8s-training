@@ -55,14 +55,15 @@ Three layers, one Python package, in strict dependency order:
   process/filesystem). This is where every game *action* lives (hint/check/reveal/
   reset/start).
 - **`cka_game/web/app.py`** — FastAPI, **read-only by design** — it only renders
-  `scenarios/` + `data/progress.json`/`data/player.json` state. There are **two write
+  `scenarios/` + `data/progress.json`/`data/player.json`/`data/scoreboard.json` state. There are **two write
   routes**: `POST /getting-started/register` (creates a personal sandbox namespace in
   the cluster) and `POST /api/scoreboard/submit` (writes only `data/scoreboard.json`,
   cluster-free); every other route must stay cluster-free. Don't add cluster access to
   any other web route without a very deliberate reason — this boundary has been
   reviewed and enforced repeatedly across this project's history.
 - **Shared scoreboard hub:** `cka-game serve` runs under `docker compose` with no
-  kubeconfig. Players' CLIs push scores to it using `CKA_GAME_SERVER` (hub URL) and
+  kubeconfig (the image sets `CKA_GAME_ROOT=/app`; the hub token comes from
+  `CKA_GAME_TOKEN` or is generated into `data/hub_token`). Players' CLIs push scores to it using `CKA_GAME_SERVER` (hub URL) and
   `CKA_GAME_TOKEN` (shared join token).
 
 **Module-level globals, not constructor injection:** `SCENARIOS_DIR`/`PROGRESS_PATH`

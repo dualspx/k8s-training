@@ -136,3 +136,13 @@ def test_token_matches():
     assert sb.token_matches("abc", "abc") is True
     assert sb.token_matches("abd", "abc") is False
     assert sb.token_matches("", "abc") is False
+
+
+def test_generated_token_file_is_private(tmp_path, monkeypatch):
+    import stat
+
+    path = tmp_path / "data" / "hub_token"
+    monkeypatch.setattr(sb, "HUB_TOKEN_PATH", path)
+    monkeypatch.setenv("CKA_GAME_TOKEN", "")
+    sb.get_hub_token()
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

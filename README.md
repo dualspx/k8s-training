@@ -141,12 +141,21 @@ cleans up so you can retry. The full command list is under "Playing" below.
 
 Optional: run one hub that collects everyone's scores.
 
-- **Hub (owner, once):** `cp .env.example .env`, set `CKA_GAME_TOKEN`,
-  `docker compose up -d --build`, open the firewall for TCP 8000, then share
-  `http://<this-machine-LAN-IP>:8000` and the token. The hub needs no kubeconfig.
+- **Hub (owner, once):**
+  ```bash
+  mkdir -p hub-data    # create it yourself so Docker doesn't make it root-owned
+  printf 'CKA_GAME_TOKEN=%s\nHUB_UID=%s\nHUB_GID=%s\n' "$(openssl rand -hex 12)" "$(id -u)" "$(id -g)" > .env
+  docker compose up -d --build
+  hostname -I | awk '{print $1}'    # your LAN IP
+  sudo ufw allow 8000/tcp           # LAN/VPN only; never port-forward this to the internet
+  ```
+  Share `http://<this-machine-LAN-IP>:8000` and the token from `.env`. The hub needs
+  no kubeconfig. If `CKA_GAME_TOKEN` is left empty, the hub generates one, readable via
+  `docker compose logs hub` or `hub-data/hub_token`.
 - **Players:** `export CKA_GAME_SERVER=http://<hub-ip>:8000` and
   `export CKA_GAME_TOKEN=<token>` (add to your shell profile), pick a unique name
-  with `cka-game whoami --set <name>`, and play as usual. View the board with
+  with `cka-game whoami --set <name>` first (two players with the same name, e.g. the same
+  OS login, get a 409 "name is used by someone else" warning), and play as usual. View the board with
   `cka-game scoreboard` or `http://<hub-ip>:8000/scoreboard`; `cka-game sync`
   re-sends everything after being offline.
 - **Owner plays too:** same two env vars, with `http://localhost:8000`.

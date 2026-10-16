@@ -1,6 +1,7 @@
 services:
   hub:
     build: .
+    user: "${HUB_UID:-1000}:${HUB_GID:-1000}"
     restart: unless-stopped
     ports:
       - "8000:8000"

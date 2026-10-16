@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
+from cka_game.core import scoreboard_client
 from cka_game.core.identity import get_player_name, is_player_name_set, set_player_name
 from cka_game.core.kube import ClusterSafetyError, assert_ambient_context_is_safe, build_cluster_client
 from cka_game.core.markdown_scenario import MarkdownScenarioError, parse_markdown_scenario
@@ -20,7 +21,6 @@ from cka_game.core.scenarios import (
     load_scenarios,
     save_scenario,
 )
-from cka_game.core import scoreboard_client
 from cka_game.core.scoreboard import get_hub_token
 from cka_game.core.scoreboard_client import ScoreboardClientError
 from cka_game.core.scoring import compute_score
@@ -284,7 +284,7 @@ def show_scoreboard():
     table = Table("#", "Player", "Score", "Completed", "Hints")
     for p in players:
         table.add_row(
-            str(p["rank"]), p["player"], str(p["total"]), str(p["completed"]), str(p["hints_used"])
+            str(p["rank"]), escape(str(p["player"])), str(p["total"]), str(p["completed"]), str(p["hints_used"])
         )
     console.print(table)
 

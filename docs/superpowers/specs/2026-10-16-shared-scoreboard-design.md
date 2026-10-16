@@ -83,8 +83,8 @@ host CLI and competes like any other player.
   and `./scenarios:/app/scenarios` (hub validates scenario ids against these, and
   edits made in the author UI persist on the host).
 - The container has **no kubeconfig and no `CKA_GAME_KUBE_CONTEXT`**: it never
-  reaches a cluster. `POST /getting-started/register`: the existing handler already converts
-  `ClusterSafetyError` into a friendly message; no change needed. Players' CLIs still do all cluster
+  reaches a cluster. `POST /getting-started/register` needs no change.
+  The existing handler already converts `ClusterSafetyError` into a friendly message. Players' CLIs still do all cluster
   work locally.
 - Owner plays on the host with `CKA_GAME_SERVER=http://localhost:8000` and the same
   token.

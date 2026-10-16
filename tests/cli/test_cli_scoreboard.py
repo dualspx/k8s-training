@@ -159,3 +159,11 @@ def test_scoreboard_command_error_exits_1(tmp_path, monkeypatch):
     result = runner.invoke(cli_main.app, ["scoreboard"])
     assert result.exit_code == 1
     assert "unreachable" in result.stdout
+
+
+def test_scoreboard_does_not_interpret_markup_in_player_names(monkeypatch):
+    rows = [{"rank": 1, "player": "a[b]x[/b]", "total": 1, "completed": 0, "hints_used": 0}]
+    monkeypatch.setattr(cli_main.scoreboard_client, "fetch_ranking", lambda: rows)
+    result = runner.invoke(cli_main.app, ["scoreboard"])
+    assert result.exit_code == 0
+    assert "a[b]x[/b]" in result.stdout
