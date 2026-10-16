@@ -1,0 +1,70 @@
+title: Spread replicas across nodes
+description: >
+  In namespace "scenario-cluster-anti-affinity", create Deployment "ha-web"
+  (image nginx:1.25, 2 replicas, Pod label app=ha-web). Enforce — with a
+  REQUIRED pod anti-affinity rule on the kubernetes.io/hostname topology, not
+  by hand-placing Pods — that no two replicas ever run on the same node.
+  Both replicas must be Ready.
+category: cluster
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution"
+  - "Each term needs labelSelector (matching app=ha-web) and topologyKey: kubernetes.io/hostname."
+answer: |
+  kubectl create namespace scenario-cluster-anti-affinity
+  cat <<'EOF' | kubectl apply -n scenario-cluster-anti-affinity -f -
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ha-web
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: ha-web
+    template:
+      metadata:
+        labels:
+          app: ha-web
+      spec:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    app: ha-web
+                topologyKey: kubernetes.io/hostname
+        containers:
+          - name: nginx
+            image: nginx:1.25
+  EOF
+  kubectl rollout status deployment/ha-web -n scenario-cluster-anti-affinity --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-cluster-anti-affinity
+    name: ha-web
+    value: nginx:1.25
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-anti-affinity
+    name: ha-web
+    field: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.topologyKey
+    value: kubernetes.io/hostname
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-anti-affinity
+    name: ha-web
+    field: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution.0.labelSelector.matchLabels.app
+    value: ha-web
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-anti-affinity
+    name: ha-web
+    field: status.readyReplicas
+    value: 2
+reset:
+  - kind: Namespace
+    name: scenario-cluster-anti-affinity

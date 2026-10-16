@@ -10,7 +10,7 @@ def test_all_seed_scenarios_load_without_warnings(caplog):
     with caplog.at_level(logging.WARNING):
         scenarios = load_scenarios(SCENARIOS_DIR)
     assert caplog.text == ""
-    assert len(scenarios) == 53
+    assert len(scenarios) == 59
 
 
 def test_seed_scenario_ids_are_unique():

@@ -31,6 +31,7 @@ EXTRA_CLEANUP = {
     "workloads-node-affinity": ["kubectl label node cka-practice-worker disktype-"],
     "cluster-drain-node": ["kubectl uncordon cka-practice-worker2"],
     "workloads-pod-nodeselector-ssd": ["kubectl label node cka-practice-worker disk-"],
+    "cluster-taint-dedicated-node": ["kubectl taint nodes cka-practice-worker dedicated-"],
 }
 
 

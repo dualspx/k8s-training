@@ -1,0 +1,109 @@
+title: PersistentVolume pinned to a node
+description: >
+  The data for this volume only exists on node "{worker}". Create
+  PersistentVolume "pinned-pv" (1Gi, ReadWriteOnce, no storage class,
+  hostPath /mnt/pinned with type DirectoryOrCreate) with a node affinity that
+  restricts it to the node whose kubernetes.io/hostname is "{worker}". In
+  namespace "scenario-storage-pinned" create PVC "pinned-pvc" bound to it and
+  Pod "pinned-app" (image nginx) mounting the claim at /usr/share/nginx/html.
+  Do NOT set nodeName or nodeSelector on the Pod — the volume's node affinity
+  alone must place it on "{worker}".
+category: storage
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "PV spec.nodeAffinity.required.nodeSelectorTerms[].matchExpressions: key kubernetes.io/hostname, operator In, values [<node>]."
+  - "storageClassName: \"\" on both PV and PVC (this cluster has a default class that would otherwise be applied)."
+answer: |
+  kubectl create namespace scenario-storage-pinned
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: pinned-pv
+  spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClassName: ""
+    hostPath:
+      path: /mnt/pinned
+      type: DirectoryOrCreate
+    nodeAffinity:
+      required:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - {worker}
+  ---
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: pinned-pvc
+    namespace: scenario-storage-pinned
+  spec:
+    storageClassName: ""
+    volumeName: pinned-pv
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pinned-app
+    namespace: scenario-storage-pinned
+  spec:
+    containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+          - name: html
+            mountPath: /usr/share/nginx/html
+    volumes:
+      - name: html
+        persistentVolumeClaim:
+          claimName: pinned-pvc
+  EOF
+  kubectl wait --for=condition=Ready pod/pinned-app -n scenario-storage-pinned --timeout=120s
+verify:
+  - type: field_equals
+    kind: PersistentVolume
+    name: pinned-pv
+    field: spec.nodeAffinity.required.nodeSelectorTerms.0.matchExpressions.0.values.0
+    value: "{worker}"
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-pinned
+    name: pinned-pvc
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-pinned
+    name: pinned-app
+    field: spec.nodeName
+    value: "{worker}"
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-pinned
+    name: pinned-app
+    field: spec.nodeSelector
+    value: null
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-pinned
+    name: pinned-app
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-storage-pinned
+  - kind: PersistentVolume
+    name: pinned-pv

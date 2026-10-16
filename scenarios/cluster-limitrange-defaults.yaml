@@ -1,0 +1,63 @@
+title: Fix Pods rejected by a quota with a LimitRange
+description: >
+  Namespace "scenario-cluster-limitrange" has a ResourceQuota "compute-quota"
+  that requires every Pod to declare CPU requests and limits, and Deployment
+  "app" (3 replicas, no resources set) therefore has no Pods. Without editing
+  the Deployment or the quota, create a LimitRange named "container-defaults"
+  that gives every container a default CPU request of 100m and a default CPU
+  limit of 200m, so all 3 replicas become Ready. Run `cka-game start
+  cluster-limitrange-defaults` first.
+category: cluster
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl describe replicaset -n scenario-cluster-limitrange — the event says 'must specify limits.cpu, requests.cpu'."
+  - "LimitRange: spec.limits[] of type Container with 'default' (the limit) and 'defaultRequest' (the request)."
+setup: |
+  kubectl create namespace scenario-cluster-limitrange
+  kubectl create quota compute-quota --hard=requests.cpu=500m,limits.cpu=1 -n scenario-cluster-limitrange
+  kubectl create deployment app --image=nginx:1.25 --replicas=3 -n scenario-cluster-limitrange
+answer: |
+  cat <<'EOF' | kubectl apply -n scenario-cluster-limitrange -f -
+  apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: container-defaults
+  spec:
+    limits:
+      - type: Container
+        defaultRequest:
+          cpu: 100m
+        default:
+          cpu: 200m
+  EOF
+  kubectl rollout status deployment/app -n scenario-cluster-limitrange --timeout=180s
+verify:
+  - type: field_equals
+    kind: LimitRange
+    namespace: scenario-cluster-limitrange
+    name: container-defaults
+    field: spec.limits.0.type
+    value: Container
+  - type: field_equals
+    kind: LimitRange
+    namespace: scenario-cluster-limitrange
+    name: container-defaults
+    field: spec.limits.0.defaultRequest.cpu
+    value: 100m
+  - type: field_equals
+    kind: LimitRange
+    namespace: scenario-cluster-limitrange
+    name: container-defaults
+    field: spec.limits.0.default.cpu
+    value: 200m
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-limitrange
+    name: app
+    field: status.readyReplicas
+    value: 3
+reset:
+  - kind: Namespace
+    name: scenario-cluster-limitrange

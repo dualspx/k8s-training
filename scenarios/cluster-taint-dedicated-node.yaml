@@ -1,0 +1,77 @@
+title: Dedicate a node with a taint
+description: >
+  Reserve node "{worker}" for batch work: taint it dedicated=batch:NoSchedule.
+  Then, in namespace "scenario-cluster-taint", create Deployment "batch-job"
+  (image nginx:1.25, 2 replicas) whose Pods tolerate that taint AND are pinned
+  to that node with a nodeSelector on its kubernetes.io/hostname label, so
+  both replicas are Ready there. (No automated reset removes the taint — run
+  "kubectl taint nodes {worker} dedicated-" yourself afterwards.)
+category: cluster
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl taint nodes <node> key=value:NoSchedule"
+  - "A toleration only permits scheduling on the tainted node; the nodeSelector is what forces it there."
+  - "tolerations: [{key: dedicated, operator: Equal, value: batch, effect: NoSchedule}]"
+answer: |
+  kubectl taint nodes {worker} dedicated=batch:NoSchedule --overwrite
+  kubectl create namespace scenario-cluster-taint
+  cat <<'EOF' | kubectl apply -n scenario-cluster-taint -f -
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: batch-job
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: batch-job
+    template:
+      metadata:
+        labels:
+          app: batch-job
+      spec:
+        nodeSelector:
+          kubernetes.io/hostname: {worker}
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: batch
+            effect: NoSchedule
+        containers:
+          - name: nginx
+            image: nginx:1.25
+  EOF
+  kubectl rollout status deployment/batch-job -n scenario-cluster-taint --timeout=120s
+verify:
+  - type: field_equals
+    kind: Node
+    name: "{worker}"
+    field: spec.taints.0.key
+    value: dedicated
+  - type: field_equals
+    kind: Node
+    name: "{worker}"
+    field: spec.taints.0.value
+    value: batch
+  - type: field_equals
+    kind: Node
+    name: "{worker}"
+    field: spec.taints.0.effect
+    value: NoSchedule
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-taint
+    name: batch-job
+    field: spec.template.spec.tolerations.0.key
+    value: dedicated
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-taint
+    name: batch-job
+    field: status.readyReplicas
+    value: 2
+reset:
+  - kind: Namespace
+    name: scenario-cluster-taint

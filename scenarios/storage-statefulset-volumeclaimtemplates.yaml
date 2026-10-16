@@ -1,0 +1,101 @@
+title: StatefulSet with per-replica storage
+description: >
+  In namespace "scenario-storage-sts", create a headless Service "kv" (port
+  80, selector app=kv) and a StatefulSet "kv" (image nginx:1.25, 2 replicas,
+  serviceName kv) where every replica gets its own 100Mi ReadWriteOnce volume
+  from the "standard" StorageClass, mounted at /data. Use a
+  volumeClaimTemplate named "data". Both replicas must be Ready and both
+  generated claims Bound.
+category: storage
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "volumeClaimTemplates lives on the StatefulSet spec, next to template; the claims are then named <template>-<sts>-<ordinal>, e.g. data-kv-0."
+  - "The container mounts the template by name: volumeMounts: [{name: data, mountPath: /data}]."
+answer: |
+  kubectl create namespace scenario-storage-sts
+  cat <<'EOF' | kubectl apply -n scenario-storage-sts -f -
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: kv
+  spec:
+    clusterIP: None
+    selector:
+      app: kv
+    ports:
+      - port: 80
+  ---
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: kv
+  spec:
+    serviceName: kv
+    replicas: 2
+    selector:
+      matchLabels:
+        app: kv
+    template:
+      metadata:
+        labels:
+          app: kv
+      spec:
+        containers:
+          - name: nginx
+            image: nginx:1.25
+            volumeMounts:
+              - name: data
+                mountPath: /data
+    volumeClaimTemplates:
+      - metadata:
+          name: data
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 100Mi
+  EOF
+  kubectl rollout status statefulset/kv -n scenario-storage-sts --timeout=180s
+verify:
+  - type: field_equals
+    kind: Service
+    namespace: scenario-storage-sts
+    name: kv
+    field: spec.clusterIP
+    value: None
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-storage-sts
+    name: kv
+    field: spec.volumeClaimTemplates.0.metadata.name
+    value: data
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-storage-sts
+    name: kv
+    field: spec.volumeClaimTemplates.0.spec.resources.requests.storage
+    value: 100Mi
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-storage-sts
+    name: kv
+    field: status.readyReplicas
+    value: 2
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-sts
+    name: data-kv-0
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-sts
+    name: data-kv-1
+    field: status.phase
+    value: Bound
+reset:
+  - kind: Namespace
+    name: scenario-storage-sts

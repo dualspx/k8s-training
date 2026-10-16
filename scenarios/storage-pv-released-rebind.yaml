@@ -1,0 +1,118 @@
+title: Reuse a Released PersistentVolume
+description: >
+  PersistentVolume "legacy-pv" (1Gi, Retain, no storage class) was used by a
+  claim that has since been deleted, so it is stuck in phase Released and
+  holds data that must be kept. Do NOT delete or recreate the PV. In namespace
+  "scenario-storage-rebind", create PVC "new-claim" (1Gi, ReadWriteOnce, no
+  storage class) so it binds to "legacy-pv", then create Pod "reader" (image
+  busybox, command `sleep 3600`) mounting it at /data. Run `cka-game start
+  storage-pv-released-rebind` first.
+category: storage
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl get pv legacy-pv -o yaml — spec.claimRef still points at the old, deleted claim, which is why the PV is not Available."
+  - "Clear it: kubectl patch pv legacy-pv --type=json -p '[{\"op\":\"remove\",\"path\":\"/spec/claimRef\"}]'"
+  - "On this cluster set storageClassName: \"\" on the PVC, otherwise the default class is applied and the PVC never matches the PV."
+setup: |
+  kubectl create namespace scenario-storage-rebind
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: legacy-pv
+  spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    persistentVolumeReclaimPolicy: Retain
+    storageClassName: ""
+    hostPath:
+      path: /mnt/legacy
+      type: DirectoryOrCreate
+  ---
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: old-claim
+    namespace: scenario-storage-rebind
+  spec:
+    storageClassName: ""
+    volumeName: legacy-pv
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  EOF
+  kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/old-claim -n scenario-storage-rebind --timeout=60s
+  kubectl delete pvc old-claim -n scenario-storage-rebind
+  kubectl wait --for=jsonpath='{.status.phase}'=Released pv/legacy-pv --timeout=60s
+answer: |
+  kubectl patch pv legacy-pv --type=json -p '[{"op":"remove","path":"/spec/claimRef"}]'
+  cat <<'EOF' | kubectl apply -n scenario-storage-rebind -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: new-claim
+  spec:
+    storageClassName: ""
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: reader
+  spec:
+    containers:
+      - name: reader
+        image: busybox
+        command: ["sleep", "3600"]
+        volumeMounts:
+          - name: data
+            mountPath: /data
+    volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: new-claim
+  EOF
+  kubectl wait --for=condition=Ready pod/reader -n scenario-storage-rebind --timeout=120s
+verify:
+  - type: field_equals
+    kind: PersistentVolume
+    name: legacy-pv
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: PersistentVolume
+    name: legacy-pv
+    field: spec.claimRef.name
+    value: new-claim
+  - type: field_equals
+    kind: PersistentVolume
+    name: legacy-pv
+    field: spec.persistentVolumeReclaimPolicy
+    value: Retain
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-rebind
+    name: new-claim
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-rebind
+    name: reader
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-storage-rebind
+  - kind: PersistentVolume
+    name: legacy-pv
