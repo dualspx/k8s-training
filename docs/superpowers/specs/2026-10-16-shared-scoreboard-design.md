@@ -3,7 +3,7 @@
 ## Goal
 
 Let players on any machine see a common scoreboard. This machine runs the hub
-(`cka-game serve`); players' CLIs push their scores to it over the LAN/VPN.
+(`cka-game serve`, run via docker compose); players' CLIs push their scores to it over the LAN/VPN.
 Local progress stays the source of truth, so the game works offline.
 
 ## Decisions
@@ -70,6 +70,32 @@ Ranking: total score desc, then completed count desc, then player name asc
 - Uses `urllib`/`httpx` already available in the project deps (confirm in plan; add
   nothing heavy).
 
+## Hub deployment (docker compose)
+
+The hub runs as a compose service on this machine; the owner also plays from the
+host CLI and competes like any other player.
+
+- `Dockerfile`: python slim, `pip install .`, `CMD cka-game serve --host 0.0.0.0`
+  (add a `--host` option to `serve` if missing; default stays `127.0.0.1`).
+- `docker-compose.yml`: one service `hub`, `restart: unless-stopped`, port
+  `8000:8000`, env `CKA_GAME_TOKEN` from `.env` (git-ignored; `.env.example`
+  committed), volumes `./data:/app/data` (scoreboard + progress survive restarts)
+  and `./scenarios:/app/scenarios` (hub validates scenario ids against these, and
+  edits made in the author UI persist on the host).
+- The container has **no kubeconfig and no `CKA_GAME_KUBE_CONTEXT`**: it never
+  reaches a cluster. `POST /getting-started/register` (the only cluster-using web
+  route) returns a clear "register from the host CLI" error when the hub has no
+  context configured, instead of a stack trace. Players' CLIs still do all cluster
+  work locally.
+- Owner plays on the host with `CKA_GAME_SERVER=http://localhost:8000` and the same
+  token. Because `./data` is shared, the host's own progress also appears on the
+  hub's per-scenario board; the scoreboard itself is only fed by pushes, so the
+  owner appears the same way as everyone else.
+- Other players use `http://<this-machine-LAN-IP>:8000`; README notes the firewall
+  port and `docker compose up -d`.
+- Token: if `CKA_GAME_TOKEN` is unset in the container, the generated token is
+  written to `data/hub_token` (visible on the host) and logged.
+
 ## Architecture notes
 
 - Hub logic lives in `core/scoreboard.py` (store, ranking, validation) with no
@@ -88,7 +114,7 @@ Ranking: total score desc, then completed count desc, then player name asc
 ## Docs
 
 README: "Join the shared scoreboard" step for players, hub setup section (token,
-URL, firewall port). CLAUDE.md: note on the second write route.
+URL, firewall port, `docker compose up -d`). CLAUDE.md: note on the second write route.
 
 ## Out of scope
 
