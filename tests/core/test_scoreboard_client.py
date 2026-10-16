@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import urllib.error
@@ -89,14 +90,44 @@ def test_push_failures_return_warning_not_raise(env, monkeypatch, exc, needle):
     assert needle in warning
 
 
-def test_bad_server_url_is_unreachable(env, monkeypatch):
+def test_malformed_server_url_is_unreachable(env, monkeypatch):
     monkeypatch.setenv("CKA_GAME_SERVER", "not-a-url")
-
-    def real_like(req, timeout=None):
-        raise ValueError("unknown url type: 'not-a-url'")
-
-    monkeypatch.setattr(sc.urllib.request, "urlopen", real_like)
     assert "unreachable" in sc.push("a", ProgressEntry())
+
+
+def test_bad_status_line_is_unreachable_not_raised(env, monkeypatch):
+    def boom(req, timeout=None):
+        raise http.client.BadStatusLine("garbage")
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", boom)
+    assert "unreachable" in sc.push("a", ProgressEntry())
+
+
+def test_identity_failure_returns_warning_not_raised(env, monkeypatch):
+    def broken_id():
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(sc, "get_player_id", broken_id)
+    warning = sc.push("a", ProgressEntry())
+    assert "read-only filesystem" in warning
+
+
+def test_identity_failure_in_sync_sets_error_not_raised(env, monkeypatch):
+    def broken_id():
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(sc, "get_player_id", broken_id)
+    result = sc.sync({"a": ProgressEntry()})
+    assert result.sent == 0
+    assert "read-only filesystem" in result.error
+
+
+def test_auth_warning_is_not_told_to_sync(env, monkeypatch):
+    def rejected(req, timeout=None):
+        raise _http_error(401)
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", rejected)
+    assert "sync" not in sc.push("a", ProgressEntry())
 
 
 def test_sync_sends_all_entries(env):
@@ -146,6 +177,15 @@ def test_fetch_ranking_unconfigured_raises(monkeypatch):
 def test_fetch_ranking_garbage_response_raises(env, monkeypatch):
     monkeypatch.setattr(
         sc.urllib.request, "urlopen", lambda req, timeout=None: FakeResponse(b"<html>")
+    )
+    with pytest.raises(sc.ScoreboardClientError) as exc:
+        sc.fetch_ranking()
+    assert exc.value.kind == "other"
+
+
+def test_fetch_ranking_non_list_players_raises(env, monkeypatch):
+    monkeypatch.setattr(
+        sc.urllib.request, "urlopen", lambda req, timeout=None: FakeResponse(b'{"players": "x"}')
     )
     with pytest.raises(sc.ScoreboardClientError) as exc:
         sc.fetch_ranking()

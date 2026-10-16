@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import urllib.error
@@ -66,7 +67,7 @@ def _request(req: urllib.request.Request, server: str) -> bytes:
                 "unknown_scenario", "hub doesn't have that scenario (is your scenarios/ up to date?)"
             )
         raise ScoreboardClientError("other", f"hub returned HTTP {exc.code}")
-    except (urllib.error.URLError, OSError, ValueError):
+    except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError):
         raise ScoreboardClientError("unreachable", f"scoreboard unreachable ({server})")
 
 
@@ -97,7 +98,13 @@ def push(scenario_id: str, entry: ProgressEntry) -> str | None:
     try:
         _submit(server, token, scenario_id, entry)
     except ScoreboardClientError as exc:
-        return f"{exc.message} — run `cka-game sync` later"
+        if exc.kind == "unreachable":
+            return f"{exc.message} — run `cka-game sync` later"
+        return exc.message
+    # Defensive: identity file I/O (corrupt JSON, read-only FS, permissions) can fail
+    # outside the HTTP path. The never-raises contract requires catching anything here.
+    except Exception as exc:  # noqa: BLE001
+        return f"could not send score: {exc}"
     return None
 
 
@@ -117,6 +124,9 @@ def sync(entries: dict[str, ProgressEntry]) -> SyncResult:
                 break
             result.skipped += 1
             continue
+        except Exception as exc:  # noqa: BLE001 - never-raises contract, see push()
+            result.error = f"could not send score: {exc}"
+            break
         result.sent += 1
     return result
 
@@ -127,6 +137,9 @@ def fetch_ranking() -> list[dict]:
         raise ScoreboardClientError("not_configured", "CKA_GAME_SERVER is not set")
     raw = _request(_build_request(server, "/api/scoreboard"), server)
     try:
-        return json.loads(raw)["players"]
+        players = json.loads(raw)["players"]
     except (ValueError, KeyError, TypeError):
         raise ScoreboardClientError("other", "unexpected response from the hub")
+    if not isinstance(players, list):
+        raise ScoreboardClientError("other", "unexpected response from the hub")
+    return players
