@@ -1,0 +1,27 @@
+title: Create a Deployment
+description: >
+  In namespace "scenario-workloads-echoserver", create a Deployment named
+  "source-ip-app" that uses the image registry.k8s.io/echoserver:1.4.
+category: workloads
+difficulty: easy
+points: 5
+hint_penalty: 1
+hints:
+  - "kubectl create deployment <name> --image=<image> -n <namespace>"
+answer: |
+  kubectl create namespace scenario-workloads-echoserver
+  kubectl create deployment source-ip-app --image=registry.k8s.io/echoserver:1.4 \
+    -n scenario-workloads-echoserver
+verify:
+  - type: resource_exists
+    kind: Deployment
+    namespace: scenario-workloads-echoserver
+    name: source-ip-app
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-workloads-echoserver
+    name: source-ip-app
+    value: registry.k8s.io/echoserver:1.4
+reset:
+  - kind: Namespace
+    name: scenario-workloads-echoserver

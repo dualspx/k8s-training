@@ -1,0 +1,55 @@
+title: Pod with two containers
+description: >
+  In namespace "scenario-workloads-multi-container", create a Pod named
+  "pod-cka" with two containers: "cka1" (image nginx) and "cka2" (image
+  busybox, command `sleep 3000`).
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "Generate a starting manifest with: kubectl run pod-cka --image=nginx --dry-run=client -o yaml"
+  - "Add a second entry under spec.containers; the command is a list: [\"sleep\", \"3000\"]"
+answer: |
+  kubectl create namespace scenario-workloads-multi-container
+  cat <<'EOF' | kubectl apply -n scenario-workloads-multi-container -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pod-cka
+  spec:
+    containers:
+      - name: cka1
+        image: nginx
+      - name: cka2
+        image: busybox
+        command: ["sleep", "3000"]
+  EOF
+verify:
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-workloads-multi-container
+    name: pod-cka
+    container: cka1
+    value: nginx
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-workloads-multi-container
+    name: pod-cka
+    container: cka2
+    value: busybox
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-multi-container
+    name: pod-cka
+    field: spec.containers.1.command.0
+    value: sleep
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-multi-container
+    name: pod-cka
+    field: spec.containers.1.command.1
+    value: "3000"
+reset:
+  - kind: Namespace
+    name: scenario-workloads-multi-container

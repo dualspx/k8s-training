@@ -1,0 +1,88 @@
+title: Probes that depend on a Service
+description: >
+  In namespace "scenario-workloads-probes", Service "service-am-i-ready"
+  already exists (run `cka-game start workloads-readiness-probe-service`
+  first). (1) Create a Pod "ready-if-service-ready" (image nginx:1.16.1-alpine)
+  with a livenessProbe that executes `true` and a readinessProbe that checks
+  the Service is reachable via `wget -T2 -O- http://service-am-i-ready:80`.
+  Confirm it is NOT ready. (2) Create a second Pod "am-i-ready" (same image)
+  with label id=cross-server-ready so the Service gains it as an endpoint.
+  Confirm the first Pod now becomes Ready.
+category: workloads
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "Exec probes: livenessProbe.exec.command: [\"true\"]; readinessProbe.exec.command: [\"sh\", \"-c\", \"wget -T2 -O- http://service-am-i-ready:80\"]"
+  - "kubectl get endpoints service-am-i-ready -n ... shows which labels the Service selects (id=cross-server-ready)."
+setup: |
+  kubectl create namespace scenario-workloads-probes
+  cat <<'EOF' | kubectl apply -n scenario-workloads-probes -f -
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: service-am-i-ready
+  spec:
+    selector:
+      id: cross-server-ready
+    ports:
+      - port: 80
+        targetPort: 80
+  EOF
+answer: |
+  cat <<'EOF' | kubectl apply -n scenario-workloads-probes -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: ready-if-service-ready
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.16.1-alpine
+        livenessProbe:
+          exec:
+            command: ["true"]
+        readinessProbe:
+          exec:
+            command: ["sh", "-c", "wget -T2 -O- http://service-am-i-ready:80"]
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: am-i-ready
+    labels:
+      id: cross-server-ready
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.16.1-alpine
+  EOF
+  kubectl wait --for=condition=Ready pod/ready-if-service-ready \
+    -n scenario-workloads-probes --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-workloads-probes
+    name: ready-if-service-ready
+    value: nginx:1.16.1-alpine
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-probes
+    name: ready-if-service-ready
+    field: spec.containers.0.livenessProbe.exec.command.0
+    value: "true"
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-probes
+    name: am-i-ready
+    field: metadata.labels.id
+    value: cross-server-ready
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-probes
+    name: ready-if-service-ready
+    field: status.containerStatuses.0.ready
+    value: true
+reset:
+  - kind: Namespace
+    name: scenario-workloads-probes

@@ -1,0 +1,114 @@
+title: PV, PVC and a Deployment that mounts it
+description: >
+  Create PersistentVolume "safari-pv" (2Gi, ReadWriteOnce, hostPath
+  /volumes/data, no storage class). In namespace "scenario-storage-safari"
+  create PersistentVolumeClaim "safari-pvc" requesting 2Gi ReadWriteOnce with
+  no storage class, bound to that PV. Finally create Deployment "safari"
+  (image httpd:2.4.41-alpine, 1 replica) that mounts the claim at
+  /tmp/safari-data. Note: this cluster has a default StorageClass, so "no
+  storage class" means setting storageClassName to the empty string "" on both
+  objects — omitting the field would make the PVC pick the default class and
+  never bind to your PV.
+category: storage
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "storageClassName: \"\" on the PVC disables dynamic provisioning and lets it bind to a class-less PV."
+  - "Deployment: spec.template.spec.volumes[].persistentVolumeClaim.claimName plus containers[].volumeMounts[]."
+answer: |
+  kubectl create namespace scenario-storage-safari
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: safari-pv
+  spec:
+    capacity:
+      storage: 2Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClassName: ""
+    hostPath:
+      path: /volumes/data
+  ---
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: safari-pvc
+    namespace: scenario-storage-safari
+  spec:
+    storageClassName: ""
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 2Gi
+  ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: safari
+    namespace: scenario-storage-safari
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: safari
+    template:
+      metadata:
+        labels:
+          app: safari
+      spec:
+        containers:
+          - name: httpd
+            image: httpd:2.4.41-alpine
+            volumeMounts:
+              - name: data
+                mountPath: /tmp/safari-data
+        volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: safari-pvc
+  EOF
+  kubectl rollout status deployment/safari -n scenario-storage-safari --timeout=120s
+verify:
+  - type: field_equals
+    kind: PersistentVolume
+    name: safari-pv
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-safari
+    name: safari-pvc
+    field: spec.volumeName
+    value: safari-pv
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-storage-safari
+    name: safari
+    value: httpd:2.4.41-alpine
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-storage-safari
+    name: safari
+    field: spec.template.spec.volumes.0.persistentVolumeClaim.claimName
+    value: safari-pvc
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-storage-safari
+    name: safari
+    field: spec.template.spec.containers.0.volumeMounts.0.mountPath
+    value: /tmp/safari-data
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-storage-safari
+    name: safari
+    field: status.readyReplicas
+    value: 1
+reset:
+  - kind: Namespace
+    name: scenario-storage-safari
+  - kind: PersistentVolume
+    name: safari-pv

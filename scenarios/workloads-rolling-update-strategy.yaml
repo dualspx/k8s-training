@@ -1,0 +1,47 @@
+title: Zero-downtime rolling update
+description: >
+  In namespace "scenario-workloads-rolling", create a Deployment named
+  "mockpod" with image nginx:1.16 and 1 replica. Configure its rolling update
+  strategy with maxSurge 1 and maxUnavailable 0, then upgrade the image to
+  nginx:1.17 and wait for the rollout to finish.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl patch deployment mockpod -p '{\"spec\":{\"strategy\":{\"rollingUpdate\":{\"maxSurge\":1,\"maxUnavailable\":0}}}}'"
+  - "kubectl set image deployment/mockpod nginx=nginx:1.17 — and kubectl rollout status to watch it."
+answer: |
+  kubectl create namespace scenario-workloads-rolling
+  kubectl create deployment mockpod --image=nginx:1.16 --replicas=1 -n scenario-workloads-rolling
+  kubectl patch deployment mockpod -n scenario-workloads-rolling \
+    -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge":1,"maxUnavailable":0}}}}'
+  kubectl set image deployment/mockpod nginx=nginx:1.17 -n scenario-workloads-rolling
+  kubectl rollout status deployment/mockpod -n scenario-workloads-rolling --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-workloads-rolling
+    name: mockpod
+    value: nginx:1.17
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-workloads-rolling
+    name: mockpod
+    field: spec.strategy.rollingUpdate.maxUnavailable
+    value: 0
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-workloads-rolling
+    name: mockpod
+    field: spec.strategy.rollingUpdate.maxSurge
+    value: 1
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-workloads-rolling
+    name: mockpod
+    field: status.readyReplicas
+    value: 1
+reset:
+  - kind: Namespace
+    name: scenario-workloads-rolling

@@ -1,0 +1,36 @@
+title: Drain a node
+description: >
+  A Deployment "web" (3 replicas) is running in namespace
+  "scenario-cluster-drain" (run `cka-game start cluster-drain-node` first).
+  Take node "{worker2}" out of service: make it unschedulable and evict its
+  Pods so that all 3 replicas are Ready on the remaining nodes. DaemonSet Pods
+  can't be evicted, so tell drain to ignore them. (No automated reset — run
+  "kubectl uncordon {worker2}" yourself before retrying.)
+category: cluster
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl drain <node> --ignore-daemonsets"
+  - "If Pods use emptyDir you also need --delete-emptydir-data."
+setup: |
+  kubectl create namespace scenario-cluster-drain
+  kubectl create deployment web --image=nginx:1.25 --replicas=3 -n scenario-cluster-drain
+answer: |
+  kubectl drain {worker2} --ignore-daemonsets --delete-emptydir-data
+  kubectl rollout status deployment/web -n scenario-cluster-drain --timeout=120s
+verify:
+  - type: field_equals
+    kind: Node
+    name: "{worker2}"
+    field: spec.unschedulable
+    value: true
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-cluster-drain
+    name: web
+    field: status.readyReplicas
+    value: 3
+reset:
+  - kind: Namespace
+    name: scenario-cluster-drain

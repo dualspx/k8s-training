@@ -1,0 +1,51 @@
+title: Schedule a Pod with a nodeSelector
+description: >
+  Label node "{worker}" with disk=ssd, then in namespace
+  "scenario-workloads-nodeselector" create a Pod named "nginx-kusc00401"
+  (image nginx) with nodeSelector disk=ssd. It must end up Running.
+  (No automated reset removes the node label — run
+  "kubectl label node {worker} disk-" yourself afterwards.)
+category: workloads
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl label node <node> disk=ssd"
+  - "Put nodeSelector under the Pod's spec: nodeSelector: {disk: ssd}"
+answer: |
+  kubectl label node {worker} disk=ssd --overwrite
+  kubectl create namespace scenario-workloads-nodeselector
+  cat <<'EOF' | kubectl apply -n scenario-workloads-nodeselector -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx-kusc00401
+  spec:
+    nodeSelector:
+      disk: ssd
+    containers:
+      - name: nginx
+        image: nginx
+  EOF
+  kubectl wait --for=condition=Ready pod/nginx-kusc00401 -n scenario-workloads-nodeselector --timeout=120s
+verify:
+  - type: field_equals
+    kind: Node
+    name: "{worker}"
+    field: metadata.labels.disk
+    value: ssd
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-nodeselector
+    name: nginx-kusc00401
+    field: spec.nodeSelector.disk
+    value: ssd
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-nodeselector
+    name: nginx-kusc00401
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-workloads-nodeselector

@@ -132,3 +132,47 @@ def test_setup_field_round_trips_through_save_and_load(tmp_path):
     save_scenario(tmp_path, scenario)
     loaded = load_scenario(tmp_path, "with-setup")
     assert loaded.setup == "kubectl create namespace foo"
+
+
+NODE_YAML = """
+title: Cordon a node
+description: Cordon node {worker2} (cluster {cluster}).
+category: cluster
+difficulty: easy
+points: 5
+hint_penalty: 1
+hints:
+  - "kubectl cordon {worker2}"
+setup: |
+  kubectl label node {worker} x=y --overwrite
+  echo ${HOME}
+answer: "kubectl cordon {worker2}"
+verify:
+  - type: field_equals
+    kind: Node
+    name: "{worker2}"
+    field: spec.unschedulable
+    value: true
+reset: []
+"""
+
+
+def test_node_placeholders_use_default_prefix(tmp_path, monkeypatch):
+    monkeypatch.delenv("CKA_GAME_NODE_PREFIX", raising=False)
+    (tmp_path / "cordon.yaml").write_text(NODE_YAML)
+    s = load_scenario(tmp_path, "cordon")
+    assert s.description == "Cordon node cka-practice-worker2 (cluster cka-practice)."
+    assert s.hints == ["kubectl cordon cka-practice-worker2"]
+    assert s.answer == "kubectl cordon cka-practice-worker2"
+    assert s.verify[0]["name"] == "cka-practice-worker2"
+    assert s.verify[0]["value"] is True
+    assert "kubectl label node cka-practice-worker x=y" in s.setup
+    assert "${HOME}" in s.setup
+
+
+def test_node_placeholders_use_env_prefix(tmp_path, monkeypatch):
+    monkeypatch.setenv("CKA_GAME_NODE_PREFIX", "alice")
+    (tmp_path / "cordon.yaml").write_text(NODE_YAML)
+    s = load_scenario(tmp_path, "cordon")
+    assert s.verify[0]["name"] == "alice-worker2"
+    assert s.answer == "kubectl cordon alice-worker2"

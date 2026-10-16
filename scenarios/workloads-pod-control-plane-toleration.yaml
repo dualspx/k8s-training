@@ -1,0 +1,53 @@
+title: Run a Pod on the control plane only
+description: >
+  In namespace "scenario-workloads-control-plane", create a Pod named "pod1"
+  (image httpd:2.4.41-alpine) whose container is named "pod1-container". It
+  must be scheduled on the control-plane node and only there. Do not add new
+  labels to any node.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl describe node <control-plane-node> | grep Taint — the node is tainted, so the Pod needs a toleration."
+  - "A toleration only allows the control plane; to force it, also use nodeSelector node-role.kubernetes.io/control-plane: \"\" (a label the node already has)."
+answer: |
+  kubectl create namespace scenario-workloads-control-plane
+  cat <<'EOF' | kubectl apply -n scenario-workloads-control-plane -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pod1
+  spec:
+    containers:
+      - name: pod1-container
+        image: httpd:2.4.41-alpine
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
+  EOF
+  kubectl wait --for=condition=Ready pod/pod1 -n scenario-workloads-control-plane --timeout=120s
+verify:
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-workloads-control-plane
+    name: pod1
+    container: pod1-container
+    value: httpd:2.4.41-alpine
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-control-plane
+    name: pod1
+    field: spec.nodeName
+    value: "{cluster}-control-plane"
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-control-plane
+    name: pod1
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-workloads-control-plane

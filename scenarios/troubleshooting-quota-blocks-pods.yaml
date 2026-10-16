@@ -1,0 +1,44 @@
+title: ResourceQuota blocks new Pods
+description: >
+  In namespace "scenario-troubleshooting-quota", Deployment "batch-worker"
+  asks for 4 replicas but only 2 Pods exist. Find out why and fix it by
+  changing the existing ResourceQuota (do not scale the Deployment down) so
+  that up to 5 Pods are allowed and all 4 replicas become Ready. Run
+  `cka-game start troubleshooting-quota-blocks-pods` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl describe replicaset -n scenario-troubleshooting-quota — look for 'exceeded quota' events; kubectl get resourcequota -n ..."
+  - "kubectl patch resourcequota pod-limit -n ... -p '{\"spec\":{\"hard\":{\"pods\":\"5\"}}}'"
+setup: |
+  kubectl create namespace scenario-troubleshooting-quota
+  kubectl create quota pod-limit --hard=pods=2 -n scenario-troubleshooting-quota
+  kubectl create deployment batch-worker --image=nginx:1.25 --replicas=4 -n scenario-troubleshooting-quota
+answer: |
+  kubectl patch resourcequota pod-limit -n scenario-troubleshooting-quota \
+    -p '{"spec":{"hard":{"pods":"5"}}}'
+  kubectl rollout status deployment/batch-worker -n scenario-troubleshooting-quota --timeout=180s
+verify:
+  - type: field_equals
+    kind: ResourceQuota
+    namespace: scenario-troubleshooting-quota
+    name: pod-limit
+    field: spec.hard.pods
+    value: "5"
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-quota
+    name: batch-worker
+    field: spec.replicas
+    value: 4
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-quota
+    name: batch-worker
+    field: status.readyReplicas
+    value: 4
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-quota

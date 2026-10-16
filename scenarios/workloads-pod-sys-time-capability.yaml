@@ -1,0 +1,51 @@
+title: Grant a Linux capability
+description: >
+  In namespace "scenario-workloads-sys-time", create a Pod named "mock-pod"
+  (image busybox) whose container sleeps for 4000 seconds and is allowed to
+  set the system clock.
+category: workloads
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "Setting the system time is the SYS_TIME Linux capability."
+  - "securityContext.capabilities.add: [\"SYS_TIME\"] on the container."
+answer: |
+  kubectl create namespace scenario-workloads-sys-time
+  cat <<'EOF' | kubectl apply -n scenario-workloads-sys-time -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: mock-pod
+  spec:
+    containers:
+      - name: busybox
+        image: busybox
+        command: ["sleep", "4000"]
+        securityContext:
+          capabilities:
+            add: ["SYS_TIME"]
+  EOF
+  kubectl wait --for=condition=Ready pod/mock-pod -n scenario-workloads-sys-time --timeout=120s
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sys-time
+    name: mock-pod
+    field: spec.containers.0.securityContext.capabilities.add.0
+    value: SYS_TIME
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sys-time
+    name: mock-pod
+    field: spec.containers.0.command.0
+    value: sleep
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-workloads-sys-time
+    name: mock-pod
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-workloads-sys-time

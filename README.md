@@ -107,6 +107,36 @@ in-browser walkthrough of all of the above, plus registering as a player (which 
 creates a personal sandbox namespace, `player-<your-name>`, for you to practice in
 freely) — everything below is also covered there.
 
+## Run the game
+
+With the venv activated, your practice cluster up, and `CKA_GAME_KUBE_CONTEXT` set
+(see Setup above), from the project root:
+
+**1. Start the web board** (terminal 1, leave it running)
+
+```bash
+cka-game serve                 # http://localhost:8000
+cka-game serve --port 18890    # or pick another port
+```
+
+Open the URL in your browser. `/getting-started` has an in-browser walkthrough and lets
+you register as a player (this also creates your sandbox namespace, `player-<your-name>`).
+
+**2. Play from the CLI** (terminal 2: activate the venv and re-export
+`CKA_GAME_KUBE_CONTEXT` here too)
+
+```bash
+cka-game whoami                 # who you are playing as
+cka-game list                   # pick a scenario id
+cka-game start <scenario-id>    # applies the scenario's setup to the cluster
+cka-game show <scenario-id>     # read the task
+# ... solve it with kubectl ...
+cka-game check <scenario-id>    # verify your work; watch the board update
+```
+
+Stuck? `cka-game hint <scenario-id>` costs points; `cka-game reset <scenario-id>`
+cleans up so you can retry. The full command list is under "Playing" below.
+
 ## Playing (junior mode)
 
 ```bash

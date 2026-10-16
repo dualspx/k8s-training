@@ -1,0 +1,44 @@
+title: hostPath PersistentVolume (ReadOnlyMany)
+description: >
+  Create a PersistentVolume named "app-data" with capacity 2Gi, access mode
+  ReadOnlyMany, and a hostPath volume at /srv/app-data.
+category: storage
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "PersistentVolumes are cluster-scoped, so there is no namespace. kubectl has no 'create pv', so write a manifest."
+  - "spec.capacity.storage, spec.accessModes and spec.hostPath.path"
+answer: |
+  cat <<'EOF' | kubectl apply -f -
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: app-data
+  spec:
+    capacity:
+      storage: 2Gi
+    accessModes:
+      - ReadOnlyMany
+    hostPath:
+      path: /srv/app-data
+  EOF
+verify:
+  - type: field_equals
+    kind: PersistentVolume
+    name: app-data
+    field: spec.capacity.storage
+    value: 2Gi
+  - type: field_equals
+    kind: PersistentVolume
+    name: app-data
+    field: spec.accessModes.0
+    value: ReadOnlyMany
+  - type: field_equals
+    kind: PersistentVolume
+    name: app-data
+    field: spec.hostPath.path
+    value: /srv/app-data
+reset:
+  - kind: PersistentVolume
+    name: app-data

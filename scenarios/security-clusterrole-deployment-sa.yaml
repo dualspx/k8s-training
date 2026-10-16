@@ -1,0 +1,59 @@
+title: Namespaced pipeline access via a ClusterRole
+description: >
+  Namespace "scenario-security-cicd" already exists (run `cka-game start
+  security-clusterrole-deployment-sa` first). Create a ClusterRole named
+  "deployment-clusterrole" that only allows the verb create on deployments,
+  statefulsets and daemonsets. Create a ServiceAccount "cicd-token" in that
+  namespace, and bind the ClusterRole to it with a RoleBinding named
+  "cicd-token-binding" so the access is limited to "scenario-security-cicd"
+  (not a ClusterRoleBinding).
+category: security
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl create clusterrole deployment-clusterrole --verb=create --resource=deployments,statefulsets,daemonsets"
+  - "A RoleBinding may reference a ClusterRole: kubectl create rolebinding ... --clusterrole=... --serviceaccount=<ns>:<name> -n <ns>"
+setup: |
+  kubectl create namespace scenario-security-cicd
+answer: |
+  kubectl create clusterrole deployment-clusterrole --verb=create \
+    --resource=deployments,statefulsets,daemonsets
+  kubectl create serviceaccount cicd-token -n scenario-security-cicd
+  kubectl create rolebinding cicd-token-binding \
+    --clusterrole=deployment-clusterrole \
+    --serviceaccount=scenario-security-cicd:cicd-token \
+    -n scenario-security-cicd
+verify:
+  - type: field_equals
+    kind: ClusterRole
+    name: deployment-clusterrole
+    field: rules.0.verbs.0
+    value: create
+  - type: resource_exists
+    kind: ServiceAccount
+    namespace: scenario-security-cicd
+    name: cicd-token
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-cicd
+    name: cicd-token-binding
+    field: roleRef.kind
+    value: ClusterRole
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-cicd
+    name: cicd-token-binding
+    field: roleRef.name
+    value: deployment-clusterrole
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-cicd
+    name: cicd-token-binding
+    field: subjects.0.name
+    value: cicd-token
+reset:
+  - kind: Namespace
+    name: scenario-security-cicd
+  - kind: ClusterRole
+    name: deployment-clusterrole

@@ -1,0 +1,66 @@
+title: Expose a Pod on a fixed NodePort
+description: >
+  Pod "my-pod" (nginx, listening on port 80) already runs in namespace
+  "scenario-networking-expose-pod" (run `cka-game start
+  networking-expose-pod-nodeport` first). Create a NodePort Service named
+  "my-pod-svc" that selects it, exposes port 8080 (forwarding to container
+  port 80) and uses NodePort 30080.
+category: networking
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl expose pod my-pod --name=my-pod-svc --type=NodePort --port=8080 --target-port=80 gives you everything except the fixed nodePort."
+  - "Set spec.ports[0].nodePort: 30080 by editing or patching the Service afterwards (or write the manifest by hand)."
+setup: |
+  kubectl create namespace scenario-networking-expose-pod
+  kubectl run my-pod --image=nginx -n scenario-networking-expose-pod
+answer: |
+  cat <<'EOF' | kubectl apply -n scenario-networking-expose-pod -f -
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: my-pod-svc
+  spec:
+    type: NodePort
+    selector:
+      run: my-pod
+    ports:
+      - port: 8080
+        targetPort: 80
+        nodePort: 30080
+  EOF
+verify:
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-expose-pod
+    name: my-pod-svc
+    field: spec.type
+    value: NodePort
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-expose-pod
+    name: my-pod-svc
+    field: spec.selector.run
+    value: my-pod
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-expose-pod
+    name: my-pod-svc
+    field: spec.ports.0.port
+    value: 8080
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-expose-pod
+    name: my-pod-svc
+    field: spec.ports.0.targetPort
+    value: 80
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-expose-pod
+    name: my-pod-svc
+    field: spec.ports.0.nodePort
+    value: 30080
+reset:
+  - kind: Namespace
+    name: scenario-networking-expose-pod

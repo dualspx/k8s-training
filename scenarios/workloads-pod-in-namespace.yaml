@@ -1,0 +1,26 @@
+title: Pod in a new namespace
+description: >
+  Create a new namespace "scenario-workloads-my-website", then create a Pod
+  named "mongo" using image "mongo" inside it.
+category: workloads
+difficulty: easy
+points: 5
+hint_penalty: 1
+hints:
+  - "kubectl create namespace ... then kubectl run mongo --image=mongo -n ..."
+answer: |
+  kubectl create namespace scenario-workloads-my-website
+  kubectl run mongo --image=mongo -n scenario-workloads-my-website
+verify:
+  - type: resource_exists
+    kind: Pod
+    namespace: scenario-workloads-my-website
+    name: mongo
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-workloads-my-website
+    name: mongo
+    value: mongo
+reset:
+  - kind: Namespace
+    name: scenario-workloads-my-website

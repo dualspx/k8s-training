@@ -1,0 +1,47 @@
+title: Scale a StatefulSet down
+description: >
+  In namespace "scenario-workloads-sts-scale" there are two Pods named
+  "o3db-*". Management asked you to scale them down to one replica to save
+  resources. Work out which controller owns those Pods, then scale it. Run
+  `cka-game start workloads-statefulset-scale-down` first.
+category: workloads
+difficulty: easy
+points: 5
+hint_penalty: 1
+hints:
+  - "kubectl get pods -n scenario-workloads-sts-scale --show-labels, or kubectl get all -n ... to see the owner."
+  - "kubectl scale statefulset o3db --replicas=1 -n scenario-workloads-sts-scale"
+setup: |
+  kubectl create namespace scenario-workloads-sts-scale
+  cat <<'EOF' | kubectl apply -n scenario-workloads-sts-scale -f -
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: o3db
+  spec:
+    serviceName: o3db
+    replicas: 2
+    selector:
+      matchLabels:
+        app: o3db
+    template:
+      metadata:
+        labels:
+          app: o3db
+      spec:
+        containers:
+          - name: o3db
+            image: nginx:1.25
+  EOF
+answer: |
+  kubectl scale statefulset o3db --replicas=1 -n scenario-workloads-sts-scale
+verify:
+  - type: field_equals
+    kind: StatefulSet
+    namespace: scenario-workloads-sts-scale
+    name: o3db
+    field: spec.replicas
+    value: 1
+reset:
+  - kind: Namespace
+    name: scenario-workloads-sts-scale

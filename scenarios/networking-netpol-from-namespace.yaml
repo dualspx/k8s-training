@@ -1,0 +1,73 @@
+title: NetworkPolicy allowing one namespace on one port
+description: >
+  Namespaces "scenario-netpol-fubar", "scenario-netpol-internal" (labeled
+  team=internal) and "scenario-netpol-other" (labeled team=other) already
+  exist (run `cka-game start networking-netpol-from-namespace` first). In
+  "scenario-netpol-fubar" create a NetworkPolicy named
+  "allow-port-from-namespace" that applies to all Pods in that namespace and
+  allows ingress only from Pods in the namespace labeled team=internal, only
+  to TCP port 9000. Pods in other namespaces, and other ports, must stay
+  blocked.
+category: networking
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "podSelector: {} selects every Pod in the policy's namespace."
+  - "ingress[].from[].namespaceSelector.matchLabels selects the allowed namespaces; ingress[].ports[] limits the port."
+  - "Namespace and Pod selectors in the SAME from-entry are ANDed; in separate entries they are ORed."
+setup: |
+  kubectl create namespace scenario-netpol-fubar
+  kubectl create namespace scenario-netpol-internal
+  kubectl create namespace scenario-netpol-other
+  kubectl label namespace scenario-netpol-internal team=internal
+  kubectl label namespace scenario-netpol-other team=other
+answer: |
+  cat <<'EOF' | kubectl apply -n scenario-netpol-fubar -f -
+  apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-port-from-namespace
+  spec:
+    podSelector: {}
+    policyTypes:
+      - Ingress
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                team: internal
+        ports:
+          - protocol: TCP
+            port: 9000
+  EOF
+verify:
+  - type: resource_exists
+    kind: NetworkPolicy
+    namespace: scenario-netpol-fubar
+    name: allow-port-from-namespace
+  - type: field_equals
+    kind: NetworkPolicy
+    namespace: scenario-netpol-fubar
+    name: allow-port-from-namespace
+    field: spec.policyTypes.0
+    value: Ingress
+  - type: field_equals
+    kind: NetworkPolicy
+    namespace: scenario-netpol-fubar
+    name: allow-port-from-namespace
+    field: spec.ingress.0.from.0.namespaceSelector.matchLabels.team
+    value: internal
+  - type: field_equals
+    kind: NetworkPolicy
+    namespace: scenario-netpol-fubar
+    name: allow-port-from-namespace
+    field: spec.ingress.0.ports.0.port
+    value: 9000
+reset:
+  - kind: Namespace
+    name: scenario-netpol-fubar
+  - kind: Namespace
+    name: scenario-netpol-internal
+  - kind: Namespace
+    name: scenario-netpol-other

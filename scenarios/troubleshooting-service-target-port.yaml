@@ -1,0 +1,67 @@
+title: Service routes to the wrong port
+description: >
+  In namespace "scenario-troubleshooting-targetport", Deployment "web" (nginx,
+  listening on port 80) sits behind Service "web" on port 80, but requests
+  through the Service are refused. Find the problem and fix the Service so
+  traffic reaches the container. Run `cka-game start
+  troubleshooting-service-target-port` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl describe service web -n scenario-troubleshooting-targetport — compare Port, TargetPort and Endpoints with what nginx actually listens on."
+  - "kubectl patch service web --type=json -p '[{\"op\":\"replace\",\"path\":\"/spec/ports/0/targetPort\",\"value\":80}]'"
+setup: |
+  kubectl create namespace scenario-troubleshooting-targetport
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-targetport -f -
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: web
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: web
+    template:
+      metadata:
+        labels:
+          app: web
+      spec:
+        containers:
+          - name: nginx
+            image: nginx:1.25
+            ports:
+              - containerPort: 80
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: web
+  spec:
+    selector:
+      app: web
+    ports:
+      - port: 80
+        targetPort: 8080
+  EOF
+answer: |
+  kubectl patch service web -n scenario-troubleshooting-targetport --type=json \
+    -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":80}]'
+verify:
+  - type: field_equals
+    kind: Service
+    namespace: scenario-troubleshooting-targetport
+    name: web
+    field: spec.ports.0.targetPort
+    value: 80
+  - type: field_equals
+    kind: Service
+    namespace: scenario-troubleshooting-targetport
+    name: web
+    field: spec.ports.0.port
+    value: 80
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-targetport

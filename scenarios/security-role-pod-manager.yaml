@@ -1,0 +1,51 @@
+title: Pod manager Role for a user
+description: >
+  In namespace "scenario-security-pod-manager", create a Role named
+  "pod-manager" that allows the verbs create, get, list, update and delete on
+  pods, and a RoleBinding named "pod-manager-binding" that grants it to the
+  user "manager".
+category: security
+difficulty: easy
+points: 10
+hint_penalty: 2
+hints:
+  - "kubectl create role --verb=... --resource=pods"
+  - "kubectl create rolebinding ... --role=pod-manager --user=manager"
+answer: |
+  kubectl create namespace scenario-security-pod-manager
+  kubectl create role pod-manager --verb=create,get,list,update,delete \
+    --resource=pods -n scenario-security-pod-manager
+  kubectl create rolebinding pod-manager-binding --role=pod-manager \
+    --user=manager -n scenario-security-pod-manager
+verify:
+  - type: resource_exists
+    kind: Role
+    namespace: scenario-security-pod-manager
+    name: pod-manager
+  - type: field_equals
+    kind: Role
+    namespace: scenario-security-pod-manager
+    name: pod-manager
+    field: rules.0.resources.0
+    value: pods
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-pod-manager
+    name: pod-manager-binding
+    field: roleRef.name
+    value: pod-manager
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-pod-manager
+    name: pod-manager-binding
+    field: subjects.0.name
+    value: manager
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-security-pod-manager
+    name: pod-manager-binding
+    field: subjects.0.kind
+    value: User
+reset:
+  - kind: Namespace
+    name: scenario-security-pod-manager

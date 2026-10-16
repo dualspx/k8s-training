@@ -29,6 +29,8 @@ VERIFY_RETRY_DELAY_SECONDS = 1.0
 EXTRA_CLEANUP = {
     "cluster-cordon-node": ["kubectl uncordon cka-practice-worker2"],
     "workloads-node-affinity": ["kubectl label node cka-practice-worker disktype-"],
+    "cluster-drain-node": ["kubectl uncordon cka-practice-worker2"],
+    "workloads-pod-nodeselector-ssd": ["kubectl label node cka-practice-worker disk-"],
 }
 
 

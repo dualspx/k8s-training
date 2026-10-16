@@ -1,0 +1,56 @@
+title: Pod stuck on a missing ConfigMap
+description: >
+  In namespace "scenario-troubleshooting-configmap", Pod "app" never starts.
+  Diagnose it and fix the cause WITHOUT editing or recreating the Pod, so it
+  reaches Running and Ready. Run `cka-game start
+  troubleshooting-missing-configmap` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl get pod app -n scenario-troubleshooting-configmap shows CreateContainerConfigError; kubectl describe pod app shows which reference is broken."
+  - "The Pod reads key 'greeting' from ConfigMap 'app-config': kubectl create configmap app-config --from-literal=greeting=hello -n ..."
+setup: |
+  kubectl create namespace scenario-troubleshooting-configmap
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-configmap -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: app
+  spec:
+    containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "echo $GREETING; sleep 3600"]
+        env:
+          - name: GREETING
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: greeting
+  EOF
+answer: |
+  kubectl create configmap app-config --from-literal=greeting=hello \
+    -n scenario-troubleshooting-configmap
+  kubectl wait --for=condition=Ready pod/app -n scenario-troubleshooting-configmap --timeout=120s
+verify:
+  - type: resource_exists
+    kind: ConfigMap
+    namespace: scenario-troubleshooting-configmap
+    name: app-config
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-configmap
+    name: app
+    field: status.phase
+    value: Running
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-configmap
+    name: app
+    field: status.containerStatuses.0.ready
+    value: true
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-configmap

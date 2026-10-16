@@ -1,0 +1,52 @@
+title: Expose a Pod and prove DNS works
+description: >
+  In namespace "scenario-networking-dns", create a Pod "dns-resolver" (image
+  nginx) and expose it internally with a ClusterIP Service named
+  "dns-resolver-service" on port 80. Then prove the Service name resolves
+  inside the cluster by running a Pod named "dns-test" (image busybox:1.28)
+  that does `nslookup dns-resolver-service` and exits successfully (restart
+  policy Never, so it ends up Succeeded).
+category: networking
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl run dns-resolver --image=nginx and kubectl expose pod dns-resolver --name=dns-resolver-service --port=80"
+  - "kubectl run dns-test --image=busybox:1.28 --restart=Never -- nslookup dns-resolver-service; then kubectl logs dns-test"
+answer: |
+  kubectl create namespace scenario-networking-dns
+  kubectl run dns-resolver --image=nginx -n scenario-networking-dns
+  kubectl expose pod dns-resolver --name=dns-resolver-service --port=80 -n scenario-networking-dns
+  kubectl run dns-test --image=busybox:1.28 --restart=Never -n scenario-networking-dns \
+    -- nslookup dns-resolver-service
+  kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/dns-test \
+    -n scenario-networking-dns --timeout=90s
+  kubectl wait --for=condition=Ready pod/dns-resolver -n scenario-networking-dns --timeout=120s
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-networking-dns
+    name: dns-resolver
+    field: status.phase
+    value: Running
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-dns
+    name: dns-resolver-service
+    field: spec.selector.run
+    value: dns-resolver
+  - type: field_equals
+    kind: Service
+    namespace: scenario-networking-dns
+    name: dns-resolver-service
+    field: spec.ports.0.port
+    value: 80
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-networking-dns
+    name: dns-test
+    field: status.phase
+    value: Succeeded
+reset:
+  - kind: Namespace
+    name: scenario-networking-dns

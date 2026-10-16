@@ -1,0 +1,102 @@
+title: Pod Pending on an unbound PVC
+description: >
+  In namespace "scenario-troubleshooting-pvc-class", Pod "writer" is Pending
+  because its PersistentVolumeClaim "data-pvc" cannot bind. Fix it so the
+  claim is Bound and the Pod is Running, keeping the same names and the same
+  100Mi / ReadWriteOnce request. Run `cka-game start
+  troubleshooting-pvc-wrong-class` first.
+category: troubleshooting
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "kubectl describe pvc data-pvc and kubectl get storageclass — does the requested class exist?"
+  - "A PVC's storageClassName is immutable: delete the Pod and the PVC, then recreate both with a class that exists (the default is 'standard')."
+setup: |
+  kubectl create namespace scenario-troubleshooting-pvc-class
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-pvc-class -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: data-pvc
+  spec:
+    storageClassName: fast-ssd
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: writer
+  spec:
+    containers:
+      - name: writer
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+          - name: data
+            mountPath: /data
+    volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: data-pvc
+  EOF
+answer: |
+  kubectl delete pod writer -n scenario-troubleshooting-pvc-class --ignore-not-found
+  kubectl delete pvc data-pvc -n scenario-troubleshooting-pvc-class --ignore-not-found
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-pvc-class -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: data-pvc
+  spec:
+    storageClassName: standard
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: writer
+  spec:
+    containers:
+      - name: writer
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+          - name: data
+            mountPath: /data
+    volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: data-pvc
+  EOF
+  kubectl wait --for=condition=Ready pod/writer -n scenario-troubleshooting-pvc-class --timeout=120s
+verify:
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-troubleshooting-pvc-class
+    name: data-pvc
+    field: spec.storageClassName
+    value: standard
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-troubleshooting-pvc-class
+    name: data-pvc
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-troubleshooting-pvc-class
+    name: writer
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-pvc-class

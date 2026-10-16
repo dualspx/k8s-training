@@ -1,0 +1,74 @@
+title: Deployment with two separate faults
+description: >
+  In namespace "scenario-troubleshooting-two-bugs", Deployment "api" (2
+  replicas) has no Ready Pods, and there is more than one thing wrong. Fix
+  everything so both replicas are Ready: the Deployment must end up using
+  image nginx:1.25, and it must keep reading env var DB_PASSWORD from Secret
+  "db-creds" key "password" (give the Secret the value s3cret rather than
+  removing the reference). Run `cka-game start
+  troubleshooting-two-bugs-deployment` first.
+category: troubleshooting
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl get pods shows two different failure states across old/new Pods; kubectl describe pod on each one."
+  - "ErrImagePull/ImagePullBackOff → bad image tag. CreateContainerConfigError → missing Secret (or key)."
+  - "kubectl create secret generic db-creds --from-literal=password=s3cret; kubectl set image deployment/api nginx=nginx:1.25"
+setup: |
+  kubectl create namespace scenario-troubleshooting-two-bugs
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-two-bugs -f -
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: api
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: api
+    template:
+      metadata:
+        labels:
+          app: api
+      spec:
+        containers:
+          - name: nginx
+            image: nginx:1.99.99
+            env:
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: db-creds
+                    key: password
+  EOF
+answer: |
+  kubectl create secret generic db-creds --from-literal=password=s3cret \
+    -n scenario-troubleshooting-two-bugs
+  kubectl set image deployment/api nginx=nginx:1.25 -n scenario-troubleshooting-two-bugs
+  kubectl rollout status deployment/api -n scenario-troubleshooting-two-bugs --timeout=180s
+verify:
+  - type: container_image_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-two-bugs
+    name: api
+    value: nginx:1.25
+  - type: resource_exists
+    kind: Secret
+    namespace: scenario-troubleshooting-two-bugs
+    name: db-creds
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-two-bugs
+    name: api
+    field: spec.template.spec.containers.0.env.0.valueFrom.secretKeyRef.name
+    value: db-creds
+  - type: field_equals
+    kind: Deployment
+    namespace: scenario-troubleshooting-two-bugs
+    name: api
+    field: status.readyReplicas
+    value: 2
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-two-bugs

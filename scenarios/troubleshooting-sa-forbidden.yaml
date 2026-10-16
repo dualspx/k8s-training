@@ -1,0 +1,74 @@
+title: Pod forbidden by RBAC
+description: >
+  In namespace "scenario-troubleshooting-rbac", Pod "lister" runs as
+  ServiceAccount "pod-lister" and keeps calling the API to list Pods, but
+  every call is rejected with 403 Forbidden (see `kubectl logs lister`). Grant
+  the ServiceAccount permission to get and list Pods in that namespace only:
+  create Role "pod-lister-role" and RoleBinding "pod-lister-binding". Do not
+  change the Pod. Run `cka-game start troubleshooting-sa-forbidden` first.
+category: troubleshooting
+difficulty: hard
+points: 20
+hint_penalty: 4
+hints:
+  - "kubectl auth can-i list pods -n scenario-troubleshooting-rbac --as=system:serviceaccount:scenario-troubleshooting-rbac:pod-lister"
+  - "kubectl create role ... --verb=get,list --resource=pods; kubectl create rolebinding ... --role=... --serviceaccount=<ns>:<sa>"
+setup: |
+  kubectl create namespace scenario-troubleshooting-rbac
+  kubectl create serviceaccount pod-lister -n scenario-troubleshooting-rbac
+  cat <<'EOF' | kubectl apply -n scenario-troubleshooting-rbac -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: lister
+  spec:
+    serviceAccountName: pod-lister
+    containers:
+      - name: curl
+        image: curlimages/curl:8.8.0
+        command:
+          - sh
+          - -c
+          - |
+            SA=/var/run/secrets/kubernetes.io/serviceaccount
+            while true; do
+              curl -s -o /dev/null -w "list pods -> HTTP %{http_code}\n" \
+                --cacert $SA/ca.crt -H "Authorization: Bearer $(cat $SA/token)" \
+                https://kubernetes.default.svc/api/v1/namespaces/scenario-troubleshooting-rbac/pods
+              sleep 5
+            done
+  EOF
+answer: |
+  kubectl create role pod-lister-role --verb=get,list --resource=pods \
+    -n scenario-troubleshooting-rbac
+  kubectl create rolebinding pod-lister-binding --role=pod-lister-role \
+    --serviceaccount=scenario-troubleshooting-rbac:pod-lister \
+    -n scenario-troubleshooting-rbac
+verify:
+  - type: field_equals
+    kind: Role
+    namespace: scenario-troubleshooting-rbac
+    name: pod-lister-role
+    field: rules.0.resources.0
+    value: pods
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-troubleshooting-rbac
+    name: pod-lister-binding
+    field: roleRef.name
+    value: pod-lister-role
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-troubleshooting-rbac
+    name: pod-lister-binding
+    field: subjects.0.name
+    value: pod-lister
+  - type: field_equals
+    kind: RoleBinding
+    namespace: scenario-troubleshooting-rbac
+    name: pod-lister-binding
+    field: subjects.0.kind
+    value: ServiceAccount
+reset:
+  - kind: Namespace
+    name: scenario-troubleshooting-rbac

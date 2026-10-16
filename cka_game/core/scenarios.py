@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,6 +35,34 @@ class ScenarioLoadError(Exception):
     pass
 
 
+DEFAULT_NODE_PREFIX = "cka-practice"
+
+
+def _node_placeholders() -> dict[str, str]:
+    """kind names nodes <cluster>-worker, <cluster>-worker2; the cluster name differs
+    per player, so scenarios use these placeholders instead of hardcoding it.
+    Read at call time (never cached) so tests and users can change the env var."""
+    prefix = os.environ.get("CKA_GAME_NODE_PREFIX") or DEFAULT_NODE_PREFIX
+    return {
+        "{cluster}": prefix,
+        "{worker2}": f"{prefix}-worker2",
+        "{worker}": f"{prefix}-worker",
+    }
+
+
+def _substitute(value, placeholders: dict[str, str]):
+    # Plain replace, not str.format: scripts are full of literal braces like ${VAR}.
+    if isinstance(value, str):
+        for token, replacement in placeholders.items():
+            value = value.replace(token, replacement)
+        return value
+    if isinstance(value, list):
+        return [_substitute(v, placeholders) for v in value]
+    if isinstance(value, dict):
+        return {k: _substitute(v, placeholders) for k, v in value.items()}
+    return value
+
+
 def _scenario_from_dict(scenario_id: str, raw: dict) -> Scenario:
     if not isinstance(raw, dict):
         raise ScenarioLoadError(f"expected a YAML mapping, got {type(raw).__name__}")
@@ -44,6 +73,7 @@ def _scenario_from_dict(scenario_id: str, raw: dict) -> Scenario:
         raise ScenarioLoadError(
             f"id '{raw['id']}' does not match filename '{scenario_id}.yaml'"
         )
+    raw = _substitute(raw, _node_placeholders())
     return Scenario(
         id=scenario_id,
         title=raw["title"],

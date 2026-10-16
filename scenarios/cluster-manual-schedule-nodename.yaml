@@ -1,0 +1,47 @@
+title: Schedule a Pod by hand
+description: >
+  Pretend you are the scheduler. In namespace "scenario-cluster-manual-schedule",
+  create a Pod named "manual-schedule" (image httpd:2.4-alpine) that runs on
+  node "{worker}" without going through kube-scheduler. It must be Running.
+category: cluster
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "spec.nodeName assigns a Pod directly to a node and skips the scheduler."
+  - "kubectl run manual-schedule --image=httpd:2.4-alpine --dry-run=client -o yaml, then add nodeName."
+answer: |
+  kubectl create namespace scenario-cluster-manual-schedule
+  cat <<'EOF' | kubectl apply -n scenario-cluster-manual-schedule -f -
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: manual-schedule
+  spec:
+    nodeName: {worker}
+    containers:
+      - name: httpd
+        image: httpd:2.4-alpine
+  EOF
+  kubectl wait --for=condition=Ready pod/manual-schedule -n scenario-cluster-manual-schedule --timeout=120s
+verify:
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-cluster-manual-schedule
+    name: manual-schedule
+    field: spec.nodeName
+    value: "{worker}"
+  - type: container_image_equals
+    kind: Pod
+    namespace: scenario-cluster-manual-schedule
+    name: manual-schedule
+    value: httpd:2.4-alpine
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-cluster-manual-schedule
+    name: manual-schedule
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-cluster-manual-schedule

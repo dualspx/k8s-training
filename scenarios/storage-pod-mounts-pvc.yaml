@@ -1,0 +1,80 @@
+title: Mount a PVC into a Pod
+description: >
+  In namespace "scenario-storage-mount-pvc", create a PersistentVolumeClaim
+  named "pv-volume" using StorageClass "standard", access mode ReadWriteOnce
+  and a 100Mi request. Then create a Pod "web-server" (image nginx) that
+  mounts the claim at /usr/share/nginx/html. The claim must end up Bound and
+  the Pod Running.
+category: storage
+difficulty: medium
+points: 15
+hint_penalty: 3
+hints:
+  - "The 'standard' class uses WaitForFirstConsumer, so the PVC stays Pending until a Pod uses it."
+  - "Pod needs spec.volumes[].persistentVolumeClaim.claimName and containers[].volumeMounts[]."
+answer: |
+  kubectl create namespace scenario-storage-mount-pvc
+  cat <<'EOF' | kubectl apply -n scenario-storage-mount-pvc -f -
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: pv-volume
+  spec:
+    storageClassName: standard
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 100Mi
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: web-server
+  spec:
+    containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+          - name: html
+            mountPath: /usr/share/nginx/html
+    volumes:
+      - name: html
+        persistentVolumeClaim:
+          claimName: pv-volume
+  EOF
+  kubectl wait --for=condition=Ready pod/web-server -n scenario-storage-mount-pvc --timeout=120s
+verify:
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-mount-pvc
+    name: pv-volume
+    field: spec.storageClassName
+    value: standard
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-mount-pvc
+    name: pv-volume
+    field: spec.resources.requests.storage
+    value: 100Mi
+  - type: field_equals
+    kind: PersistentVolumeClaim
+    namespace: scenario-storage-mount-pvc
+    name: pv-volume
+    field: status.phase
+    value: Bound
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-mount-pvc
+    name: web-server
+    field: spec.containers.0.volumeMounts.0.mountPath
+    value: /usr/share/nginx/html
+  - type: field_equals
+    kind: Pod
+    namespace: scenario-storage-mount-pvc
+    name: web-server
+    field: status.phase
+    value: Running
+reset:
+  - kind: Namespace
+    name: scenario-storage-mount-pvc
