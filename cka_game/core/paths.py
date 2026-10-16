@@ -10,3 +10,5 @@ def _root() -> Path:
 
 SCENARIOS_DIR = _root() / "scenarios"
 PROGRESS_PATH = _root() / "data" / "progress.json"
+SCOREBOARD_PATH = _root() / "data" / "scoreboard.json"
+HUB_TOKEN_PATH = _root() / "data" / "hub_token"

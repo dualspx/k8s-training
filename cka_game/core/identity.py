@@ -3,6 +3,7 @@ from __future__ import annotations
 import getpass
 import json
 import re
+import secrets
 
 from cka_game.core.paths import PROGRESS_PATH
 
@@ -11,21 +12,47 @@ def _player_path():
     return PROGRESS_PATH.parent / "player.json"
 
 
+def _read_player() -> dict:
+    path = _player_path()
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text())
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_player(data: dict) -> None:
+    path = _player_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+
+
 def get_player_name() -> str:
-    player_path = _player_path()
-    if player_path.exists():
-        return json.loads(player_path.read_text())["name"]
-    return getpass.getuser()
+    name = _read_player().get("name")
+    return name if name else getpass.getuser()
 
 
 def is_player_name_set() -> bool:
-    return _player_path().exists()
+    return bool(_read_player().get("name"))
 
 
 def set_player_name(name: str) -> None:
-    player_path = _player_path()
-    player_path.parent.mkdir(parents=True, exist_ok=True)
-    player_path.write_text(json.dumps({"name": name}))
+    data = _read_player()
+    data["name"] = name
+    _write_player(data)
+
+
+def get_player_id() -> str:
+    """Random per-install id; lets the scoreboard hub tell two people with the same name apart."""
+    data = _read_player()
+    player_id = data.get("player_id")
+    if not player_id:
+        player_id = secrets.token_hex(16)
+        data["player_id"] = player_id
+        _write_player(data)
+    return player_id
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
