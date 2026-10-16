@@ -26,7 +26,25 @@ kubectl config use-context "$CKA_GAME_KUBE_CONTEXT"</code></pre>
   <button type="submit">{{ "Update" if is_registered else "Register" }}</button>
 </form>
 
-<h2>4. Start the game</h2>
+<h2>4. Join the shared scoreboard (optional)</h2>
+<p>To compete with others, point your CLI at the hub. Ask the hub owner for the
+  join token, then in the terminal where you run <code>cka-game</code>:</p>
+<pre><code>export CKA_GAME_SERVER=<span id="hub-url">http://&lt;hub-ip&gt;:8000</span>
+export CKA_GAME_TOKEN=&lt;token from the hub owner&gt;
+cka-game whoami --set "&lt;a unique name&gt;"
+cka-game sync          # send any progress you already have
+cka-game scoreboard    # ranking in your terminal</code></pre>
+<p>After that, <code>check</code>, <code>hint</code>, <code>reveal</code> and
+  <code>reset</code> update the board automatically; if the hub is unreachable the
+  command still works and <code>cka-game sync</code> catches up later. Pick a name
+  nobody else uses, or the hub will reject your scores.</p>
+<p><a href="/scoreboard">View the scoreboard &rarr;</a></p>
+<script>
+  // This page is served by the hub, so its own address is the server URL.
+  document.getElementById("hub-url").textContent = window.location.origin;
+</script>
+
+<h2>5. Start the game</h2>
 <p>You're already looking at the web board (that means <code>cka-game serve</code> is
   already running!). Next, in another terminal:</p>
 <p class="cli-tip">Tip: activate the virtualenv once per terminal session so you can
@@ -43,5 +61,7 @@ cka-game check &lt;scenario-id&gt;
 cka-game reveal &lt;scenario-id&gt;
 cka-game reset &lt;scenario-id&gt;
 cka-game score
+cka-game scoreboard
+cka-game sync
 </code></pre>
 {% endblock %}

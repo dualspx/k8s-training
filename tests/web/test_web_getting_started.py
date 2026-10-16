@@ -107,3 +107,12 @@ def test_nav_links_to_getting_started(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     response = client.get("/")
     assert 'href="/getting-started"' in response.text
+
+
+def test_getting_started_explains_how_to_join_the_scoreboard(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    response = client.get("/getting-started")
+    assert response.status_code == 200
+    assert "CKA_GAME_SERVER" in response.text
+    assert "CKA_GAME_TOKEN" in response.text
+    assert 'href="/scoreboard"' in response.text
