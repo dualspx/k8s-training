@@ -146,3 +146,17 @@ def test_generated_token_file_is_private(tmp_path, monkeypatch):
     monkeypatch.setenv("CKA_GAME_TOKEN", "")
     sb.get_hub_token()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_empty_token_file_is_rewritten_and_stable(tmp_path, monkeypatch):
+    import stat
+
+    path = tmp_path / "data" / "hub_token"
+    path.parent.mkdir()
+    path.write_text("  \n")
+    monkeypatch.setattr(sb, "HUB_TOKEN_PATH", path)
+    monkeypatch.setenv("CKA_GAME_TOKEN", "")
+    first = sb.get_hub_token()
+    assert sb.get_hub_token() == first
+    assert path.read_text().strip() == first
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600

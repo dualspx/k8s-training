@@ -190,3 +190,36 @@ def test_fetch_ranking_non_list_players_raises(env, monkeypatch):
     with pytest.raises(sc.ScoreboardClientError) as exc:
         sc.fetch_ranking()
     assert exc.value.kind == "other"
+
+
+def _http_error_422(message):
+    return urllib.error.HTTPError(
+        "http://hub", 422, "x", {}, io.BytesIO(json.dumps({"error": message}).encode())
+    )
+
+
+def test_push_422_includes_hub_message(env, monkeypatch):
+    def boom(req, timeout=None):
+        raise _http_error_422("score exceeds scenario points")
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", boom)
+    assert "score exceeds scenario points" in sc.push("a", ProgressEntry())
+
+
+def test_push_422_without_body_has_fallback(env, monkeypatch):
+    def boom(req, timeout=None):
+        raise _http_error(422)
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", boom)
+    assert "HTTP 422" in sc.push("a", ProgressEntry())
+
+
+def test_sync_continues_past_422(env, monkeypatch):
+    def fake(req, timeout=None):
+        if json.loads(req.data)["scenario_id"] == "bad":
+            raise _http_error_422("nope")
+        return FakeResponse(b"{}")
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", fake)
+    result = sc.sync({k: ProgressEntry() for k in ["a", "bad", "z"]})
+    assert (result.sent, result.skipped, result.error) == (2, 1, None)

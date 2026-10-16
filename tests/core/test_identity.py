@@ -47,3 +47,13 @@ def test_player_namespace_stays_within_63_chars_and_has_no_trailing_hyphen():
     assert len(namespace) <= 63
     assert namespace.startswith("player-")
     assert not namespace.endswith("-")
+
+
+def test_get_player_name_survives_unknown_uid(tmp_path, monkeypatch):
+    monkeypatch.setattr(identity, "PROGRESS_PATH", tmp_path / "data" / "progress.json")
+
+    def boom():
+        raise KeyError("getpwuid(): uid not found: 1000")
+
+    monkeypatch.setattr(identity.getpass, "getuser", boom)
+    assert identity.get_player_name() == "player"

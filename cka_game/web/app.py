@@ -205,7 +205,7 @@ def create_app() -> FastAPI:
             )
         except ScoreboardError as exc:
             return JSONResponse(
-                {"error": exc.message}, status_code=scoreboard_error_status[exc.code]
+                {"error": exc.message}, status_code=scoreboard_error_status.get(exc.code, 422)
             )
         return {"ok": True}
 

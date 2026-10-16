@@ -9,4 +9,4 @@ services:
       CKA_GAME_TOKEN: ${CKA_GAME_TOKEN:-}
     volumes:
       - ./hub-data:/app/data
-      - ./scenarios:/app/scenarios
+      - ./scenarios:/app/scenarios:ro

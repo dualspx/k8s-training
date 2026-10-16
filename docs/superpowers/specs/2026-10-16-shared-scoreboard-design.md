@@ -80,8 +80,10 @@ host CLI and competes like any other player.
 - `docker-compose.yml`: one service `hub`, `restart: unless-stopped`, port
   `8000:8000`, env `CKA_GAME_TOKEN` from `.env` (git-ignored; `.env.example`
   committed), volumes `./hub-data:/app/data` (scoreboard + progress survive restarts)
-  and `./scenarios:/app/scenarios` (hub validates scenario ids against these, and
-  edits made in the author UI persist on the host).
+  and `./scenarios:/app/scenarios:ro` (hub validates scenario ids against these; the mount
+  is read-only and live, the hub re-reads `scenarios/` per request, so author or import
+  scenarios on the host with no restart needed. The hub's `/author` pages are not meant
+  for use, and the hub should only be exposed on a trusted LAN/VPN).
 - The container has **no kubeconfig and no `CKA_GAME_KUBE_CONTEXT`**: it never
   reaches a cluster. `POST /getting-started/register` needs no change.
   The existing handler already converts `ClusterSafetyError` into a friendly message. Players' CLIs still do all cluster

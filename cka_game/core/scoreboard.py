@@ -39,10 +39,12 @@ def get_hub_token() -> str:
             return token
     token = secrets.token_urlsafe(16)
     HUB_TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | (os.O_TRUNC if HUB_TOKEN_PATH.exists() else os.O_EXCL)
     try:
-        fd = os.open(HUB_TOKEN_PATH, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd = os.open(HUB_TOKEN_PATH, flags, 0o600)
     except FileExistsError:
         return HUB_TOKEN_PATH.read_text().strip() or token
+    os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(token)
     return token

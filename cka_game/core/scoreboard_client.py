@@ -66,6 +66,15 @@ def _request(req: urllib.request.Request, server: str) -> bytes:
             raise ScoreboardClientError(
                 "unknown_scenario", "hub doesn't have that scenario (is your scenarios/ up to date?)"
             )
+        if exc.code == 422:
+            detail = ""
+            try:
+                detail = str(json.loads(exc.read()).get("error", ""))
+            except Exception:  # noqa: BLE001 - body is best-effort
+                pass
+            raise ScoreboardClientError(
+                "invalid", detail or "hub rejected the score (HTTP 422)"
+            )
         raise ScoreboardClientError("other", f"hub returned HTTP {exc.code}")
     except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError):
         raise ScoreboardClientError("unreachable", f"scoreboard unreachable ({server})")

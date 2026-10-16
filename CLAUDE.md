@@ -63,7 +63,9 @@ Three layers, one Python package, in strict dependency order:
   reviewed and enforced repeatedly across this project's history.
 - **Shared scoreboard hub:** `cka-game serve` runs under `docker compose` with no
   kubeconfig (the image sets `CKA_GAME_ROOT=/app`; the hub token comes from
-  `CKA_GAME_TOKEN` or is generated into `data/hub_token`). Players' CLIs push scores to it using `CKA_GAME_SERVER` (hub URL) and
+  `CKA_GAME_TOKEN` or is generated into `data/hub_token`; `scenarios/` is mounted
+  read-only, so author scenarios on the host, and the hub's `/author` pages are not for use;
+  expose it on a trusted LAN/VPN only). Players' CLIs push scores to it using `CKA_GAME_SERVER` (hub URL) and
   `CKA_GAME_TOKEN` (shared join token).
 
 **Module-level globals, not constructor injection:** `SCENARIOS_DIR`/`PROGRESS_PATH`

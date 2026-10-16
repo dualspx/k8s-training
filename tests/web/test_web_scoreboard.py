@@ -81,3 +81,12 @@ def test_scoreboard_page_renders_and_is_linked(tmp_path, monkeypatch):
     assert page.status_code == 200
     assert "Scoreboard" in page.text
     assert 'href="/scoreboard"' in client.get("/").text
+
+
+def test_pages_survive_unknown_uid(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "cka_game.core.identity.getpass.getuser", lambda: (_ for _ in ()).throw(KeyError("uid"))
+    )
+    assert client.get("/scoreboard").status_code == 200
+    assert client.get("/").status_code == 200

@@ -31,7 +31,12 @@ def _write_player(data: dict) -> None:
 
 def get_player_name() -> str:
     name = _read_player().get("name")
-    return name if name else getpass.getuser()
+    if name:
+        return name
+    try:
+        return getpass.getuser()
+    except (KeyError, OSError):
+        return "player"
 
 
 def is_player_name_set() -> bool:
