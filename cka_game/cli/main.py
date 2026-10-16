@@ -20,6 +20,9 @@ from cka_game.core.scenarios import (
     load_scenarios,
     save_scenario,
 )
+from cka_game.core import scoreboard_client
+from cka_game.core.scoreboard import get_hub_token
+from cka_game.core.scoreboard_client import ScoreboardClientError
 from cka_game.core.scoring import compute_score
 from cka_game.core.verify import run_verify
 
@@ -37,6 +40,12 @@ def _require_scenario(scenario_id: str):
         console.print(f"[red]No scenario '{scenario_id}'[/red]")
         raise typer.Exit(code=1)
     return scenario
+
+
+def _push_scoreboard(scenario_id: str, entry: ProgressEntry) -> None:
+    warning = scoreboard_client.push(scenario_id, entry)
+    if warning:
+        console.print(f"[yellow]{escape(warning)}[/yellow]")
 
 
 @app.command("list")
@@ -92,6 +101,7 @@ def hint(scenario_id: str):
         scenario.points, scenario.hint_penalty, entry.hints_used, entry.answer_revealed
     )
     console.print(f"Potential score is now: {potential}")
+    _push_scoreboard(scenario_id, entry)
 
 
 @app.command()
@@ -111,6 +121,8 @@ def reveal(scenario_id: str):
         console.print(f"[green]Already completed. Score: {entry.score}[/green]")
     else:
         console.print("[yellow]Potential score for this scenario is now 0.[/yellow]")
+    if not already_completed:
+        _push_scoreboard(scenario_id, entry)
 
 
 @app.command()
@@ -225,10 +237,12 @@ def check(scenario_id: str):
             entry.status = "completed"
             store.save(scenario_id, entry)
         console.print(f"[bold green]Completed! Score: {entry.score}[/bold green]")
+        _push_scoreboard(scenario_id, entry)
     else:
         if entry.status == "not_started":
             entry.status = "in_progress"
             store.save(scenario_id, entry)
+        _push_scoreboard(scenario_id, entry)
         console.print("[red]Not yet passing.[/red]")
         raise typer.Exit(code=1)
 
@@ -240,8 +254,39 @@ def reset(scenario_id: str):
     messages = run_reset(scenario, client)
     for message in messages:
         console.print(message)
-    _progress_store().save(scenario_id, ProgressEntry())
+    cleared = ProgressEntry()
+    _progress_store().save(scenario_id, cleared)
     console.print("[cyan]Lab reset. Progress for this scenario cleared.[/cyan]")
+    _push_scoreboard(scenario_id, cleared)
+
+
+@app.command()
+def sync():
+    """Re-send all your local progress to the shared scoreboard."""
+    result = scoreboard_client.sync(_progress_store().load())
+    if not result.configured:
+        console.print("[red]CKA_GAME_SERVER is not set — nothing to sync to.[/red]")
+        raise typer.Exit(code=1)
+    if result.error:
+        console.print(f"[red]Sync stopped: {escape(result.error)}[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Synced {result.sent} scenario(s), skipped {result.skipped}.[/green]")
+
+
+@app.command("scoreboard")
+def show_scoreboard():
+    """Show the shared scoreboard."""
+    try:
+        players = scoreboard_client.fetch_ranking()
+    except ScoreboardClientError as exc:
+        console.print(f"[red]{escape(exc.message)}[/red]")
+        raise typer.Exit(code=1)
+    table = Table("#", "Player", "Score", "Completed", "Hints")
+    for p in players:
+        table.add_row(
+            str(p["rank"]), p["player"], str(p["total"]), str(p["completed"]), str(p["hints_used"])
+        )
+    console.print(table)
 
 
 @app.command()
@@ -250,6 +295,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000):
 
     from cka_game.web.app import create_app
 
+    console.print(f"Scoreboard join token: [bold]{get_hub_token()}[/bold]")
     uvicorn.run(create_app(), host=host, port=port)
 
 
